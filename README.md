@@ -3,6 +3,29 @@
 Ein digitaler Gastraum für bis zu 15 Leute: Tische statt Kachelwand, Ton pro
 Tisch, Bierdeckel als Gesprächsgedächtnis. Läuft **ohne eigenen Server**.
 
+**Live:** https://wiebkesw.github.io/stammtisch/
+
+## Wie kommen die anderen rein?
+
+Sie öffnen den Link, tippen ihren Namen, wählen ein Getränk, klicken
+*Reinkommen* und erlauben einmal das Mikrofon. Kein Konto, keine Installation.
+Läuft auf Laptop und Handy, in Chrome, Edge, Firefox und Safari.
+
+**Wichtig: den Raumschlüssel im Link mitgeben.** Der steht bewusst nicht im
+Code — dieser liegt ja öffentlich. Alle mit demselben `?raum=` landen im selben
+Lokal:
+
+```
+https://wiebkesw.github.io/stammtisch/?raum=<euer-schluessel>
+```
+
+Schlüssel frei wählbar, aber lang und nicht zu erraten (z. B.
+`wbg-stammtisch-7h2qm`). Nur diesen Link teilen. Ohne `?raum=` landet man im
+offenen Probierraum, in den theoretisch jeder kann.
+
+Wer im Stammtisch das Mikrofon anhat, sollte **nicht gleichzeitig in einem
+Teams- oder Zoom-Call sitzen** — das koppelt und pfeift.
+
 ## Warum das ohne Server geht
 
 Die Browser verbinden sich direkt miteinander (WebRTC). Ein fremder Dienst wird
@@ -22,16 +45,13 @@ dort gerade geredet"), daraus baut die Seite selbst ein Rauschen. Man hört,
 *dass* geredet wird, nie *was*. Das spart Bandbreite und ist nebenbei die
 saubere Lösung fürs Mithören.
 
-## Veröffentlichen (GitHub Pages)
+## Veröffentlichen (schon erledigt)
 
-1. Diesen Ordner (`raum/`) in ein Repository legen, z. B. `stammtisch`.
-2. Im Repository: *Settings → Pages → Source: Deploy from a branch*, Branch
-   `main`, Ordner `/` (oder `/docs`, dann die Dateien dorthin legen).
-3. Nach ein, zwei Minuten liegt der Raum unter
-   `https://<konto>.github.io/stammtisch/`.
+Liegt als GitHub Pages unter `WiebkeSW/stammtisch`, Branch `main`, Ordner `/`.
+Jeder Push auf `main` ist nach ein, zwei Minuten live.
 
-Wichtig: Mikrofon funktioniert nur über **HTTPS** oder auf `localhost`.
-GitHub Pages liefert HTTPS, das passt also.
+Mikrofon funktioniert nur über **HTTPS** oder auf `localhost` — GitHub Pages
+liefert HTTPS, das passt also.
 
 ## Örtlich testen
 
