@@ -7,16 +7,18 @@
    finden — dafür nutzen wir öffentliche Nostr-Relais über die Bibliothek
    Trystero. Danach läuft der Ton direkt von Laptop zu Laptop, ohne Umweg.
 
-   Und warum das für 15 Leute reicht:
-   Weil Ton hier PRO TISCH gilt. Jeder verbindet sich nur mit den vier anderen
-   an seinem Tisch, nicht mit allen vierzehn. Genau die Idee, die den Abend wie
-   eine Kneipe anfühlen lässt, macht ihn technisch billig.
+   WICHTIGE LEKTION AUS DEM ERSTEN TEST (2026-09-14):
+   Die erste Fassung hat den Ton bei jedem Tischwechsel neu ausgehandelt
+   (nur an den eigenen Tisch senden). Genau bei dieser Neuaushandlung ist es
+   manchmal nur in eine Richtung durchgelaufen — man wurde gehört, hörte aber
+   selbst nichts, oder umgekehrt.
 
-   Was später mit eigenem Server dazukommt:
-   - eigenes Finden statt fremder Relais (verlässlicher, niemand sonst im Spiel)
-   - Bierdeckel, die den Abend überdauern (jetzt: nur solange jemand da ist)
-   - größere Tische als fünf Leute
-   Die Oberfläche bleibt dabei wie sie ist — es wird nur unten drunter getauscht.
+   Jetzt läuft es wie bei Gather.town oder SpatialChat: Ton geht IMMER an
+   ALLE im Raum, ein einziges Mal verbunden, nie neu verhandelt. Wie nah man
+   an jemandem "sitzt" bestimmt nur noch die Lautstärke beim Zuhören — nicht
+   mehr, ob überhaupt eine Verbindung existiert. Das macht es robust UND
+   ehrlicher: das Gemurmel vom Nachbartisch ist jetzt echter Ton (leise,
+   dumpf gefiltert), kein nachgemachtes Rauschen mehr.
    ========================================================================== */
 
 import {joinRoom, selfId} from 'https://cdn.jsdelivr.net/npm/@trystero-p2p/nostr@0.25.4/+esm';
@@ -27,6 +29,7 @@ const params = new URLSearchParams(location.search);
 const rundenSchluessel = RUNDEN[params.get('runde')] ? params.get('runde') : STANDARD_RUNDE;
 const RUNDE = RUNDEN[rundenSchluessel];
 const ZONEN = ['tresen', 'rot', 'blau', 'gruen'];
+const TISCHZONEN = ['rot', 'blau', 'gruen'];
 
 /* Der Raumschlüssel kommt aus dem Link, nicht aus dem Code — dieser Code liegt
    öffentlich. Alle mit demselben ?raum= landen im selben Lokal. */
@@ -34,15 +37,19 @@ const raumSchluessel = (params.get('raum') || '').trim().slice(0, 60) || PROBIER
 const istProbierraum = raumSchluessel === PROBIERRAUM;
 
 /* ---------- Zustand ---------- */
-const ich = {name: '', rolle: '', zone: 'tresen', stuhl: null, getraenk: 'helles', seit: Date.now()};
-const gaeste = new Map();      // peerId -> Zustand
-const pegel = new Map();       // peerId -> 0..1
-const toene = new Map();       // peerId -> <audio>
-let deckel = new Map();        // eintragId -> {id, zeit, wer, text, zone}
+const ich = {name: '', rolle: '', zone: 'tresen', stuhl: null, getraenk: 'helles', seit: Date.now(), mikroAn: false};
+const gaeste = new Map();              // peerId -> Zustand
+const pegel = new Map();               // peerId -> 0..1 (selbst gemessen, gesendet)
+const audioGraph = new Map();          // peerId -> {quelle, filter, gain}
+const audioEmpfangenVon = new Set();   // peerId -> wir haben schon Ton von ihnen bekommen
+const deckel = new Map();              // eintragId -> {id, zeit, wer, text, zone}
+const redesteine = new Map();          // zone -> {inhaber, seit, warteliste}
+TISCHZONEN.forEach(z => redesteine.set(z, {inhaber: null, seit: 0, warteliste: []}));
+
 let raum = null;
-let sendeZustand = null, sendeDeckel = null, sendePegel = null;
+let sendeZustand = null, sendeDeckel = null, sendePegel = null, sendeRedestein = null;
 let meinStream = null;
-let letzteZiele = '';
+let tonCtx = null;
 
 /* ---------- Kurze Helfer ---------- */
 const $ = id => document.getElementById(id);
@@ -59,12 +66,20 @@ function aufzaehlen(a){
   if(a.length === 1) return a[0];
   return a.slice(0, -1).join(', ') + ' und ' + a[a.length - 1];
 }
+function tischLabel(z){
+  return z === 'tresen' ? 'Tresen' : RUNDE.tische[z].label;
+}
 function zonenName(z){
   if(z === 'tresen') return 'am Tresen';
-  return 'am ' + (RUNDE.tische[z].label || TISCHE[z].label).toLowerCase().replace('er tisch', 'en Tisch');
+  return 'am ' + tischLabel(z).toLowerCase().replace('er tisch', 'en Tisch');
 }
 function escape(s){
   return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function namenVon(peerId){
+  if(peerId === selfId) return ich.name;
+  const g = gaeste.get(peerId);
+  return g ? g.name : '?';
 }
 
 /* ===========================================================================
@@ -125,111 +140,90 @@ baueGetraenke($('getraenke-garderobe'));
 
 $('garderobe-hinweis').innerHTML =
   'Der Raum läuft direkt zwischen den Browsern — kein Konto, keine Installation. ' +
-  'Alle mit demselben Link landen im selben Lokal.';
+  'Beim Reinkommen fragen wir gleich nach dem Mikrofon; ohne geht es auch, dann schreibst du.';
 
-$('reinkommen').addEventListener('click', () => {
+$('reinkommen').addEventListener('click', async () => {
   ich.name = gewaehlterName.slice(0, 18);
   ich.rolle = $('rolle').value.trim().slice(0, 22);
   $('garderobe').hidden = true;
   $('lokal').hidden = false;
+
   starteTonanlage();     // braucht eine Nutzergeste — dieser Klick ist sie
   betreteRaum();
+  await mikroEinschalten();   // automatisch versuchen; klappt es nicht, bleibt man im Schreibmodus
+  zeigeTourFallsNeu();
 });
 $('name').addEventListener('keydown', e => {
   if(e.key === 'Enter' && !$('reinkommen').disabled) $('reinkommen').click();
 });
 
 /* ===========================================================================
-   Tonanlage: Gemurmel wird LOKAL erzeugt, nicht übertragen.
-   Von fernen Tischen kommt nur eine Zahl („wie laut redet ihr gerade"),
-   daraus baut jeder Browser selbst ein Rauschen. Man hört, DASS geredet wird,
-   nie WAS — das spart Bandbreite und ist nebenbei die saubere Lösung.
+   Tonanlage: EIN AudioContext für alles — eigene Lautstärkemessung UND die
+   Mischung des Tons, den wir von anderen bekommen (echtes Gemurmel statt
+   nachgemachtem Rauschen).
    =========================================================================== */
-let tonCtx = null, murmelGain = null;
-
 function starteTonanlage(){
   try{
     tonCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const laenge = tonCtx.sampleRate * 2;
-    const puffer = tonCtx.createBuffer(1, laenge, tonCtx.sampleRate);
-    const daten = puffer.getChannelData(0);
-    let letzt = 0;
-    for(let i = 0; i < laenge; i++){
-      const weiss = Math.random() * 2 - 1;
-      letzt = (letzt + 0.02 * weiss) / 1.02;
-      daten[i] = letzt * 3.2;
-    }
-    const quelle = tonCtx.createBufferSource();
-    quelle.buffer = puffer;
-    quelle.loop = true;
-    const filter = tonCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = 520;
-    filter.Q.value = 0.7;
-    murmelGain = tonCtx.createGain();
-    murmelGain.gain.value = 0;
-    quelle.connect(filter).connect(murmelGain).connect(tonCtx.destination);
-    quelle.start();
+    if(tonCtx.state === 'suspended') tonCtx.resume();
   }catch(e){
-    tonCtx = null;   // ohne Gemurmel funktioniert der Rest trotzdem
+    tonCtx = null;   // sehr alter Browser — Ton läuft dann über die Fallback-<audio>-Elemente
   }
-}
-
-function stelleGemurmel(){
-  let fern = 0;
-  gaeste.forEach((g, id) => { if(g.zone !== ich.zone) fern += (pegel.get(id) || 0); });
-  if(murmelGain && tonCtx){
-    const ziel = Math.min(0.26, fern * 0.1);
-    murmelGain.gain.setTargetAtTime(ziel, tonCtx.currentTime, 0.35);
-  }
-  ZONEN.forEach(z => {
-    const ring = $('ring-' + z);
-    if(!ring) return;
-    let laut = 0;
-    gaeste.forEach((g, id) => { if(g.zone === z) laut = Math.max(laut, pegel.get(id) || 0); });
-    const fremd = z !== ich.zone;
-    ring.style.opacity = fremd && laut > 0.06 ? String(Math.min(0.55, laut)) : '0';
-    ring.style.scale = String(1 + Math.min(0.09, laut * 0.12));
-  });
 }
 
 /* ===========================================================================
-   Mikrofon — Ton geht nur an den eigenen Tisch
+   Mikrofon — geht jetzt IMMER an alle im Raum. Nah/fern regelt nur noch die
+   Lautstärke beim Zuhören (siehe stelleAudioMix), nie mehr die Verbindung
+   selbst. Kein Neuaushandeln beim Tischwechsel mehr nötig.
    =========================================================================== */
-$('mikro').addEventListener('click', async () => {
-  if(meinStream){
-    meinStream.getTracks().forEach(t => t.stop());
-    try{ raum.removeStream(meinStream); }catch(e){}
-    meinStream = null;
-    letzteZiele = '';
-    $('mikro').classList.remove('an');
-    $('mikro').textContent = 'Mikrofon einschalten';
-    if(sendePegel) sendePegel(0);
-    return;
-  }
+async function mikroEinschalten(){
   try{
     meinStream = await navigator.mediaDevices.getUserMedia({
       audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true}
     });
-    $('mikro').classList.add('an');
-    $('mikro').textContent = 'Mikrofon aus';
-    setzeAudioZiele(true);
-    messePegel(meinStream);
   }catch(e){
-    $('mikro').textContent = 'Mikrofon blockiert';
-    setTimeout(() => { $('mikro').textContent = 'Mikrofon einschalten'; }, 2500);
+    ich.mikroAn = false;
+    zeigeMikroStatus('blockiert');
+    $('schreib-hinweis').hidden = false;
+    return false;
   }
+  ich.mikroAn = true;
+  if(raum) raum.addStream(meinStream);   // an alle, die schon da sind
+  messePegel(meinStream);
+  zeigeMikroStatus('an');
+  $('schreib-hinweis').hidden = true;
+  if(sendeZustand) sendeZustand(ich);
+  return true;
+}
+
+function mikroAusschalten(){
+  if(meinStream){
+    meinStream.getTracks().forEach(t => t.stop());
+    if(raum) try{ raum.removeStream(meinStream); }catch(e){}
+  }
+  meinStream = null;
+  ich.mikroAn = false;
+  if(sendePegel) sendePegel(0);
+  zeigeMikroStatus('aus');
+  $('schreib-hinweis').hidden = false;
+  if(sendeZustand) sendeZustand(ich);
+}
+
+$('mikro-pille').addEventListener('click', () => {
+  if(meinStream) mikroAusschalten();
+  else mikroEinschalten();
 });
 
-function setzeAudioZiele(erzwingen){
-  if(!meinStream || !raum) return;
-  const ziele = [...gaeste.entries()].filter(([, g]) => g.zone === ich.zone).map(([id]) => id);
-  const signatur = ziele.slice().sort().join('|');
-  if(!erzwingen && signatur === letzteZiele) return;
-  letzteZiele = signatur;
-  try{ raum.removeStream(meinStream); }catch(e){}
-  if(ziele.length) raum.addStream(meinStream, {target: ziele});
+function zeigeMikroStatus(stand){
+  const el = $('mikro-pille');
+  const txt = $('mikro-text');
+  el.className = 'mikro-leiste ' + stand;
+  if(stand === 'an') txt.textContent = 'Du wirst gehört — Mikrofon an (hier ausschalten)';
+  else if(stand === 'aus') txt.textContent = 'Mikrofon aus — du hörst nur mit (hier wieder anschalten)';
+  else if(stand === 'blockiert') txt.textContent = 'Kein Zugriff aufs Mikrofon — klick hier, um es erneut zu versuchen';
+  else txt.textContent = 'Mikrofon wird angefragt …';
 }
+zeigeMikroStatus('wartet');
 
 function messePegel(stream){
   if(!tonCtx) return;
@@ -251,8 +245,61 @@ function messePegel(stream){
     if(Math.abs(wert - zuletzt) < 0.05) return;
     zuletzt = wert;
     if(sendePegel) sendePegel(wert);
+    stelleAudioMix();
     zeichneRaum();
   }, 180);
+}
+
+/* ===========================================================================
+   Audio-Mischung beim Zuhören: hier passiert die "Entfernung".
+   - eigener Tisch: klar und laut
+   - andere Tische: leise UND dumpf gefiltert — echtes Gemurmel, keine Worte
+   - sanftes Ducken: redet gerade jemand am eigenen Tisch deutlich lauter,
+     wird die leisere Stimme etwas zurückgenommen (wie im echten Gespräch)
+   - Redestein aktiv: wer nicht dran ist, wird deutlicher gedämpft
+   =========================================================================== */
+function stelleAudioMix(){
+  if(!tonCtx || !audioGraph.size) return;
+
+  let lautesterHier = 0;
+  gaeste.forEach((g, id) => { if(g.zone === ich.zone) lautesterHier = Math.max(lautesterHier, pegel.get(id) || 0); });
+
+  const rs = redesteine.get(ich.zone);
+  const redeAktiv = rs && rs.inhaber !== null;
+
+  audioGraph.forEach((kette, id) => {
+    const g = gaeste.get(id);
+    const hierbei = g && g.zone === ich.zone;
+    let zielGain, zielFreq;
+
+    if(hierbei){
+      zielFreq = 15000;
+      if(redeAktiv && rs.inhaber !== id){
+        zielGain = 0.32;
+      }else{
+        const meinPegel = pegel.get(id) || 0;
+        const geduckt = lautesterHier > 0.2 && meinPegel < lautesterHier - 0.16;
+        zielGain = geduckt ? 0.45 : 1;
+      }
+    }else{
+      zielFreq = 650;
+      zielGain = 0.15;
+    }
+
+    const jetzt = tonCtx.currentTime;
+    kette.gain.gain.setTargetAtTime(zielGain, jetzt, 0.3);
+    kette.filter.frequency.setTargetAtTime(zielFreq, jetzt, 0.3);
+  });
+
+  TISCHZONEN.forEach(z => {
+    const ring = $('ring-' + z);
+    if(!ring) return;
+    let laut = 0;
+    gaeste.forEach((g, id) => { if(g.zone === z) laut = Math.max(laut, pegel.get(id) || 0); });
+    const fremd = z !== ich.zone;
+    ring.style.opacity = fremd && laut > 0.06 ? String(Math.min(0.55, laut)) : '0';
+    ring.style.scale = String(1 + Math.min(0.09, laut * 0.12));
+  });
 }
 
 /* ===========================================================================
@@ -261,10 +308,9 @@ function messePegel(stream){
 function betreteRaum(){
   $('lokal-titel').textContent = RUNDE.titel;
 
-  ZONEN.forEach(z => {
-    if(z === 'tresen') return;
+  TISCHZONEN.forEach(z => {
     const frage = RUNDE.tische[z].frage;
-    if(frage) deckel.set('start-' + z, {id: 'start-' + z, zone: z, zeit: 'vorher', wer: '', text: frage});
+    if(frage) deckel.set('start-' + z, {id: 'start-' + z, zone: z, zeit: 'vorher', wer: '', text: frage, frage: true});
   });
 
   baueRaum();
@@ -272,19 +318,22 @@ function betreteRaum(){
 
   raum = joinRoom({appId: 'skillsprinters-stammtisch'}, raumSchluessel);
 
-  const aZustand = raum.makeAction('zustand');
-  const aDeckel  = raum.makeAction('deckel');
-  const aPegel   = raum.makeAction('pegel');
-  sendeZustand = (z, ziel) => aZustand.send(z, ziel ? {target: ziel} : undefined);
-  sendeDeckel  = (d, ziel) => aDeckel.send(d, ziel ? {target: ziel} : undefined);
-  sendePegel   = p => aPegel.send(p);
+  const aZustand   = raum.makeAction('zustand');
+  const aDeckel    = raum.makeAction('deckel');
+  const aPegel     = raum.makeAction('pegel');
+  const aRedestein = raum.makeAction('redestein');
+  sendeZustand   = (z, ziel) => aZustand.send(z, ziel ? {target: ziel} : undefined);
+  sendeDeckel    = (d, ziel) => aDeckel.send(d, ziel ? {target: ziel} : undefined);
+  sendePegel     = p => aPegel.send(p);
+  sendeRedestein = (zone, ziel) => aRedestein.send({zone, ...redesteine.get(zone)}, ziel ? {target: ziel} : undefined);
 
   aZustand.onMessage = (zustand, {peerId}) => {
     gaeste.set(peerId, zustand);
-    loeseKonflikt(peerId, zustand);
-    setzeAudioZiele(false);
+    loeseSitzKonflikt(peerId, zustand);
+    stelleAudioMix();
     zeichneRaum();
     zeichneAnwesend();
+    zeichneDeckel();
   };
 
   aDeckel.onMessage = (liste, {peerId}) => {
@@ -296,45 +345,90 @@ function betreteRaum(){
 
   aPegel.onMessage = (wert, {peerId}) => {
     pegel.set(peerId, typeof wert === 'number' ? wert : 0);
-    stelleGemurmel();
+    stelleAudioMix();
     zeichneRaum();
+  };
+
+  aRedestein.onMessage = (nachricht, {peerId}) => {
+    if(!nachricht || !TISCHZONEN.includes(nachricht.zone)) return;
+    const lokal = redesteine.get(nachricht.zone);
+    /* Gleiches Prinzip wie beim Stuhl-Streit: wer zuerst dran war, gewinnt. */
+    const fremdFrueher = nachricht.seit < lokal.seit || (nachricht.seit === lokal.seit && peerId < selfId);
+    if(nachricht.inhaber === null || fremdFrueher || lokal.inhaber === null){
+      redesteine.set(nachricht.zone, {inhaber: nachricht.inhaber, seit: nachricht.seit, warteliste: nachricht.warteliste || []});
+      stelleAudioMix();
+      zeichneRedestein();
+    }
   };
 
   raum.onPeerJoin = peerId => {
     sendeZustand(ich, peerId);
     sendeDeckel([...deckel.values()], peerId);
+    TISCHZONEN.forEach(z => sendeRedestein(z, peerId));
+    if(meinStream) raum.addStream(meinStream, {target: peerId});
     setzeStatus();
   };
 
   raum.onPeerLeave = peerId => {
     gaeste.delete(peerId);
     pegel.delete(peerId);
-    const t = toene.get(peerId);
-    if(t){ t.remove(); toene.delete(peerId); }
-    setzeAudioZiele(true);
+    audioEmpfangenVon.delete(peerId);
+    const kette = audioGraph.get(peerId);
+    if(kette){
+      try{ kette.quelle.disconnect(); kette.filter.disconnect(); kette.gain.disconnect(); }catch(e){}
+      audioGraph.delete(peerId);
+    }
+    TISCHZONEN.forEach(z => {
+      const rs = redesteine.get(z);
+      if(rs.inhaber === peerId) redesteine.set(z, {inhaber: null, seit: Date.now(), warteliste: rs.warteliste.filter(id => id !== peerId)});
+      else if(rs.warteliste.includes(peerId)) rs.warteliste = rs.warteliste.filter(id => id !== peerId);
+    });
     zeichneRaum();
     zeichneAnwesend();
+    zeichneDeckel();
+    zeichneRedestein();
     setzeStatus();
   };
 
   raum.onPeerStream = (stream, peerId) => {
-    let el = toene.get(peerId);
-    if(!el){
-      el = document.createElement('audio');
-      el.autoplay = true;
-      $('toene').appendChild(el);
-      toene.set(peerId, el);
+    audioEmpfangenVon.add(peerId);
+
+    if(!tonCtx){
+      /* Fallback ohne WebAudio (sehr alte Browser): normales <audio autoplay> */
+      let el = document.querySelector('audio[data-peer="' + peerId + '"]');
+      if(!el){
+        el = document.createElement('audio');
+        el.autoplay = true;
+        el.dataset.peer = peerId;
+        $('toene').appendChild(el);
+      }
+      el.srcObject = stream;
+      el.play().catch(() => {});
+      zeichneRaum();
+      return;
     }
-    el.srcObject = stream;
-    const g = gaeste.get(peerId);
-    el.muted = !!(g && g.zone !== ich.zone);
-    el.play().catch(() => {});
+
+    let kette = audioGraph.get(peerId);
+    if(!kette){
+      const quelle = tonCtx.createMediaStreamSource(stream);
+      const filter = tonCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 15000;
+      const gain = tonCtx.createGain();
+      gain.gain.value = 0;
+      quelle.connect(filter).connect(gain).connect(tonCtx.destination);
+      kette = {quelle, filter, gain};
+      audioGraph.set(peerId, kette);
+    }
+    stelleAudioMix();
+    zeichneRaum();
   };
 
   sendeZustand(ich);
   zeichneRaum();
   zeichneAnwesend();
   zeichneDeckel();
+  zeichneRedestein();
   setzeStatus();
   setInterval(setzeStatus, 4000);
 
@@ -361,7 +455,7 @@ function setzeStatus(){
 }
 
 /* ---------- Stuhl-Streit: wer zuerst saß, sitzt ---------- */
-function loeseKonflikt(peerId, zustand){
+function loeseSitzKonflikt(peerId, zustand){
   if(!ich.stuhl || zustand.stuhl !== ich.stuhl) return;
   const fremdFrueher = zustand.seit < ich.seit || (zustand.seit === ich.seit && peerId < selfId);
   if(!fremdFrueher) return;
@@ -381,26 +475,22 @@ function setzePlatz(zone, stuhlId){
   ich.stuhl = stuhlId;
   ich.seit = Date.now();
   if(sendeZustand) sendeZustand(ich);
-  setzeAudioZiele(true);
-  toene.forEach((el, id) => {
-    const g = gaeste.get(id);
-    el.muted = !!(g && g.zone !== ich.zone);
-  });
+  stelleAudioMix();   // nur Lautstärke neu mischen — keine Verbindung wird angefasst
   zeichneRaum();
   zeichneAnwesend();
   zeichneDeckel();
-  stelleGemurmel();
+  zeichneRedestein();
 }
 
 /* ===========================================================================
-   Zeichnen
+   Zeichnen: Raum
    =========================================================================== */
 function baueRaum(){
   const tische = $('tische');
   const ringe = $('murmelringe');
   tische.innerHTML = '';
   ringe.innerHTML = '';
-  ['rot', 'blau', 'gruen'].forEach(z => {
+  TISCHZONEN.forEach(z => {
     const t = TISCHE[z];
 
     const ring = document.createElement('div');
@@ -485,8 +575,16 @@ function zeichneRaum(){
     el.classList.toggle('fern', l.z.zone !== ich.zone);
     el.classList.toggle('redet', (l.id === selfId ? 0 : (pegel.get(l.id) || 0)) > 0.12);
     el.title = l.z.name + (l.z.rolle ? ' · ' + l.z.rolle : '');
+
+    let tonBadge = '';
+    if(l.id !== selfId && l.z.mikroAn){
+      const angekommen = audioEmpfangenVon.has(l.id);
+      tonBadge = angekommen
+        ? '<span class="ton-status ok" title="Ton kommt an">🔊</span>'
+        : '<span class="ton-status warnung" title="Sendet Mikrofon, aber wir hören noch nichts">⚠</span>';
+    }
     el.querySelector('.kreis').innerHTML = escape(l.z.name.slice(0, 2)) +
-      '<svg class="glas" viewBox="0 0 24 32" aria-hidden="true">' + glasSVG(farbeVon(l.z.getraenk)) + '</svg>';
+      '<svg class="glas" viewBox="0 0 24 32" aria-hidden="true">' + glasSVG(farbeVon(l.z.getraenk)) + '</svg>' + tonBadge;
     el.querySelector('.name').textContent = l.z.name;
   });
   [...behaelter.children].forEach(el => { if(!gesehen.has(el.dataset.peer)) el.remove(); });
@@ -532,9 +630,9 @@ function zeichneHoerweite(){
     txt = 'Du stehst am Tresen, mit ' + aufzaehlen(nachbarn) + '. Von den Tischen kommt nur Gemurmel.';
   }else{
     txt = 'Du sitzt ' + zonenName(ich.zone) + ', bei ' + aufzaehlen(nachbarn) +
-          '. Nur diese Runde hört dich — die anderen Tische bleiben Hintergrundgeräusch.';
+          '. Nur diese Runde hört dich klar — die anderen Tische bleiben Hintergrundgeräusch.';
   }
-  if(!meinStream) txt += ' <strong>Dein Mikrofon ist aus</strong> — du hörst mit, sagst aber nichts.';
+  if(!meinStream) txt += ' <strong>Dein Mikrofon ist aus</strong> — du hörst mit, sagst aber nichts. Schreib unten, wenn du was loswerden willst.';
   el.innerHTML = txt;
 }
 
@@ -548,51 +646,62 @@ function zeichneAnwesend(){
     box.className = 'tischgruppe';
     box.style.setProperty('--tf', TISCHE[z].farbe);
     box.style.setProperty('--tf-tief', TISCHE[z].tief);
-    const titel = z === 'tresen' ? 'Tresen' : RUNDE.tische[z].label;
-    box.innerHTML = '<h3>' + escape(titel) + '</h3>' + (hier.length
+    box.innerHTML = '<h3>' + escape(tischLabel(z)) + '</h3>' + (hier.length
       ? '<ul>' + hier.map(l => '<li>' + escape(l.z.name) +
           (l.id === selfId ? ' <span class="rolle">du</span>' : '') +
-          (l.z.rolle ? ' <span class="rolle">' + escape(l.z.rolle) + '</span>' : '') + '</li>').join('') + '</ul>'
+          (l.z.rolle ? ' <span class="rolle">' + escape(l.z.rolle) + '</span>' : '') +
+          (l.id !== selfId && !l.z.mikroAn ? ' <span class="rolle">schreibt nur</span>' : '') + '</li>').join('') + '</ul>'
       : '<p class="niemand">' + (z === 'tresen' ? 'Niemand am Tresen.' : 'Noch frei — Platz für fünf.') + '</p>');
     behaelter.appendChild(box);
   });
 }
 
 /* ===========================================================================
-   Bierdeckel
+   Bierdeckel — jetzt ein lebendiger Chat direkt am Tisch, nicht mehr nur
+   gelegentliche Notizen. Was hier getippt wird, ist bewusst geschrieben —
+   anders als gesprochene Worte darf das mitgeschrieben werden.
    =========================================================================== */
 function zeichneDeckel(){
   const zone = ich.zone;
   const liste = $('deckel-liste');
   const amTisch = zone !== 'tresen';
 
-  $('deckel-titel').textContent = amTisch ? 'Bierdeckel · ' + RUNDE.tische[zone].label : 'Bierdeckel';
+  $('deckel-titel').textContent = amTisch ? 'Bierdeckel · ' + tischLabel(zone) : 'Am Tresen';
   $('deckel-unter').textContent = amTisch
-    ? 'Worüber redet ihr gerade? Wenn sich das Thema dreht, schreib eine Zeile — der Deckel sammelt mit.'
-    : 'Am Tresen liegt kein Deckel. Setz dich an einen Tisch, dann siehst du seinen.';
-  $('deckel-eingabe').disabled = !amTisch;
-  $('deckel-knopf').disabled = !amTisch;
+    ? 'Für alle an diesem Tisch sichtbar — auch wenn bei jemandem der Ton mal nicht geht.'
+    : 'Sag Hallo, oder schreib, falls dein Mikrofon nicht mitmacht.';
+  $('deckel-eingabe').placeholder = amTisch ? 'Schreib etwas — alle an deinem Tisch sehen es' : 'Schreib etwas an den Tresen';
   $('hoerweite').style.setProperty('--tf-aktiv', TISCHE[zone].farbe);
   liste.style.setProperty('--tf-aktiv', TISCHE[zone].farbe);
+  $('dein-tisch').style.setProperty('--tf-aktiv', TISCHE[zone].farbe);
+
+  const nachbarn = [];
+  gaeste.forEach(g => { if(g.zone === zone) nachbarn.push(g.name); });
+  $('tisch-wer').innerHTML = nachbarn.length
+    ? 'Hier: <b>' + escape(aufzaehlen(nachbarn)) + '</b>'
+    : 'Du bist gerade allein hier.';
 
   const eintraege = [...deckel.values()].filter(e => e.zone === zone);
-  liste.innerHTML = !amTisch ? '' : (eintraege.length
+  liste.innerHTML = eintraege.length
     ? eintraege.map(e =>
-        '<li><span class="z">' + escape(e.zeit) + '</span><span>' +
-        (e.wer ? '<b>' + escape(e.wer) + ':</b> ' : '') + '„' + escape(e.text) + '"</span></li>').join('')
-    : '<li><span class="z">—</span><span>Noch nichts drauf. Wer die erste Zeile schreibt, gibt das Thema vor.</span></li>');
+        '<li' + (e.frage ? ' class="frage"' : '') + '><span class="z">' + escape(e.zeit) + '</span><span>' +
+        (e.wer ? '<b>' + escape(e.wer) + ':</b> ' : '') + (e.frage ? '„' + escape(e.text) + '"' : escape(e.text)) + '</span></li>').join('')
+    : '<li><span class="z">—</span><span>Noch nichts geschrieben. Der erste Satz gehört dir.</span></li>';
+  liste.scrollTop = liste.scrollHeight;
+
+  zeichneRedestein();
 }
 
 function neuerDeckelEintrag(){
   const feld = $('deckel-eingabe');
   const text = feld.value.trim();
-  if(!text || ich.zone === 'tresen') return;
+  if(!text) return;
   const eintrag = {
     id: selfId + '-' + Date.now(),
     zone: ich.zone,
     zeit: uhrzeit(),
     wer: ich.name,
-    text: text.slice(0, 120)
+    text: text.slice(0, 140)
   };
   deckel.set(eintrag.id, eintrag);
   if(sendeDeckel) sendeDeckel([eintrag]);
@@ -601,6 +710,106 @@ function neuerDeckelEintrag(){
 }
 $('deckel-knopf').addEventListener('click', neuerDeckelEintrag);
 $('deckel-eingabe').addEventListener('keydown', e => { if(e.key === 'Enter') neuerDeckelEintrag(); });
+
+/* ===========================================================================
+   Redestein — optionale Gesprächsordnung für einen Tisch, der es chaotisch
+   findet. Niemand wird stummgeschaltet, nur deutlich leiser, solange
+   jemand anders den Stein hält. Am Tresen gibt es keinen (steht ja eh).
+   =========================================================================== */
+function zeichneRedestein(){
+  const leiste = $('redestein-leiste');
+  const zone = ich.zone;
+  if(zone === 'tresen'){ leiste.hidden = true; return; }
+  leiste.hidden = false;
+
+  const rs = redesteine.get(zone);
+  const nameVonHalter = rs.inhaber ? namenVon(rs.inhaber) : null;
+  const warteNamen = rs.warteliste.filter(id => id !== rs.inhaber).map(namenVon);
+
+  let status, knopf;
+  if(!rs.inhaber){
+    status = 'Kein Redestein aktiv — jeder normal zu hören.';
+    knopf = '<button class="rs-knopf" id="rs-nehmen">🗣 Redestein nehmen</button>';
+  }else if(rs.inhaber === selfId){
+    status = '<strong>Du hast den Redestein.</strong> Die anderen hören dich klar, du sie leiser.';
+    knopf = '<button class="rs-knopf aktiv" id="rs-weitergeben">Weitergeben</button>';
+  }else{
+    status = '<strong>' + escape(nameVonHalter) + '</strong> hat gerade den Redestein.' +
+      (warteNamen.length ? '<span class="warteliste">Als Nächstes: ' + escape(aufzaehlen(warteNamen)) + '</span>' : '');
+    const schonInWarteliste = rs.warteliste.includes(selfId);
+    knopf = schonInWarteliste
+      ? '<span class="warteliste">Du wartest schon.</span>'
+      : '<button class="rs-knopf" id="rs-melden">Ich möchte auch reden</button>';
+  }
+
+  leiste.innerHTML = '<span class="rs-status">' + status + '</span>' + knopf;
+
+  const nehmen = $('rs-nehmen');
+  if(nehmen) nehmen.addEventListener('click', () => {
+    redesteine.set(zone, {inhaber: selfId, seit: Date.now(), warteliste: []});
+    if(sendeRedestein) sendeRedestein(zone);
+    stelleAudioMix(); zeichneRedestein();
+  });
+  const weitergeben = $('rs-weitergeben');
+  if(weitergeben) weitergeben.addEventListener('click', () => {
+    const naechster = rs.warteliste.find(id => id !== selfId) || null;
+    redesteine.set(zone, {inhaber: naechster, seit: Date.now(), warteliste: rs.warteliste.filter(id => id !== naechster)});
+    if(sendeRedestein) sendeRedestein(zone);
+    stelleAudioMix(); zeichneRedestein();
+  });
+  const melden = $('rs-melden');
+  if(melden) melden.addEventListener('click', () => {
+    if(!rs.warteliste.includes(selfId)) rs.warteliste.push(selfId);
+    redesteine.set(zone, {inhaber: rs.inhaber, seit: rs.seit, warteliste: rs.warteliste});
+    if(sendeRedestein) sendeRedestein(zone);
+    zeichneRedestein();
+  });
+}
+
+/* ===========================================================================
+   Einführungstour — einmalig, vier Schritte, überspringbar.
+   =========================================================================== */
+function zeigeTourFallsNeu(){
+  let gesehen = false;
+  try{ gesehen = localStorage.getItem('stammtisch-tour-v1') === '1'; }catch(e){}
+  if(gesehen) return;
+
+  const schritte = [
+    {icon: '👀', titel: 'Das bist du', text: 'Der dunkle Kreis mit deinem Namen im Raum oben. Du stehst gerade am Tresen — dem Eingang.'},
+    {icon: '🎙️', titel: 'Diese Zeile zeigt: wirst du gehört?', text: 'Grün heißt, dein Mikrofon läuft und alle können dich hören. Klick drauf, um es aus- oder wieder anzuschalten.'},
+    {icon: '💬', titel: 'Falls der Ton mal nicht geht', text: 'Direkt unter dem Raum kannst du mit allen an deinem Tisch schreiben — auch ohne Mikrofon bist du voll dabei.'},
+    {icon: '🪑', titel: 'Tischwechsel', text: 'Klick auf einen freien Stuhl, um rüberzugehen. An deinem Tisch hörst du alles klar, die anderen Tische werden zu leisem Gemurmel.'}
+  ];
+
+  let schritt = 0;
+  const tour = $('tour');
+  const punkte = $('tour-punkte');
+  punkte.innerHTML = schritte.map(() => '<span></span>').join('');
+
+  function zeichneSchritt(){
+    const s = schritte[schritt];
+    $('tour-icon').textContent = s.icon;
+    $('tour-titel').textContent = s.titel;
+    $('tour-text').textContent = s.text;
+    [...punkte.children].forEach((p, i) => p.classList.toggle('aktiv', i === schritt));
+    $('tour-weiter').textContent = schritt === schritte.length - 1 ? 'Los geht\'s' : 'Weiter';
+  }
+
+  function schliessen(){
+    tour.hidden = true;
+    try{ localStorage.setItem('stammtisch-tour-v1', '1'); }catch(e){}
+  }
+
+  $('tour-weiter').onclick = () => {
+    schritt++;
+    if(schritt >= schritte.length) schliessen();
+    else zeichneSchritt();
+  };
+  $('tour-ueberspringen').onclick = schliessen;
+
+  zeichneSchritt();
+  tour.hidden = false;
+}
 
 /* ---------- Gehen ---------- */
 $('gehen').addEventListener('click', () => {

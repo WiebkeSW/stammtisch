@@ -50,6 +50,15 @@
     <span class="status-pille suchend" id="status"><span class="punkt"></span><span id="status-text">verbinde…</span></span>
   </div>
 
+  <!-- Mikro-Leiste: die wichtigste Zeile auf der ganzen Seite, deshalb ganz oben -->
+  <button class="mikro-leiste" id="mikro-pille" type="button">
+    <span class="mikro-punkt" aria-hidden="true"></span>
+    <span class="mikro-text" id="mikro-text">Mikrofon wird angefragt …</span>
+  </button>
+  <p class="schreib-hinweis" id="schreib-hinweis" hidden>
+    Kein Mikrofon? Kein Problem — <strong>du bist trotzdem im Raum</strong> und kannst unten am Tisch mitschreiben.
+  </p>
+
   <div class="raum-huelle">
     <div class="raum" id="raum">
       <div class="tuer"></div>
@@ -64,11 +73,24 @@
 
   <div class="hoerweite" id="hoerweite"></div>
 
-  <div class="pult">
-    <div class="pult-block">
-      <span class="feldtitel">Mikrofon</span>
-      <button class="knopf" id="mikro" type="button">Mikrofon einschalten</button>
+  <!-- Dein Tisch: Anwesenheit, Redestein und Chat direkt am Geschehen, nicht weit weg -->
+  <section class="dein-tisch" id="dein-tisch">
+    <div class="dt-kopf">
+      <h2 id="deckel-titel">Bierdeckel</h2>
+      <div class="dt-wer" id="tisch-wer"></div>
     </div>
+    <p class="hinweis" id="deckel-unter"></p>
+
+    <div class="redestein-leiste" id="redestein-leiste" hidden></div>
+
+    <ul class="deckel-liste" id="deckel-liste"></ul>
+    <div class="deckel-neu">
+      <input type="text" id="deckel-eingabe" maxlength="140" placeholder="Schreib etwas — alle an deinem Tisch sehen es" autocomplete="off">
+      <button class="knopf" id="deckel-knopf" type="button">Senden</button>
+    </div>
+  </section>
+
+  <div class="pult">
     <div class="pult-block">
       <span class="feldtitel">Dein Glas</span>
       <div class="getraenke" id="getraenke-pult"></div>
@@ -81,20 +103,26 @@
 
   <div class="anwesend" id="anwesend"></div>
 
-  <section class="deckel-bereich">
-    <h2 id="deckel-titel">Bierdeckel</h2>
-    <p class="hinweis" id="deckel-unter">Worüber redet ihr gerade? Wenn sich das Thema dreht, schreib eine Zeile — der Deckel sammelt mit.</p>
-    <ul class="deckel-liste" id="deckel-liste"></ul>
-    <div class="deckel-neu">
-      <input type="text" id="deckel-eingabe" maxlength="120" placeholder="Neues Thema in einem Satz" autocomplete="off">
-      <button class="knopf" id="deckel-knopf" type="button">Auf den Deckel</button>
-    </div>
-  </section>
-
   <p class="fusszeile" id="fusszeile"></p>
 </main>
 
 <div id="toene" hidden></div>
+
+<!-- Kurze Einführung, einmalig -->
+<div class="tour" id="tour" hidden>
+  <div class="tour-karte">
+    <p class="tour-icon" id="tour-icon">👀</p>
+    <h3 id="tour-titel"></h3>
+    <p id="tour-text"></p>
+    <div class="tour-fuss">
+      <div class="tour-punkte" id="tour-punkte"></div>
+      <div class="tour-knoepfe">
+        <button class="tour-ueberspringen" id="tour-ueberspringen" type="button">Überspringen</button>
+        <button class="knopf an" id="tour-weiter" type="button">Weiter</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="raum.js"></script>
 </body>
