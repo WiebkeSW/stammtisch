@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stammtisch</title>
+<meta name="description" content="Digitaler Stammtisch — Tische statt Kachelwand, Ton pro Tisch.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Karla:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="raum.css">
+</head>
+<body>
+
+<!-- ===================== Garderobe ===================== -->
+<div class="garderobe" id="garderobe">
+  <div class="garderobe-karte">
+    <div>
+      <h1 id="garderobe-titel">Stammtisch</h1>
+      <p class="hinweis" style="margin-top:6px;" id="garderobe-unter">Komm rein. Erst mal an den Tresen.</p>
+    </div>
+    <div class="farbband">
+      <i style="background:#D6453C"></i><i style="background:#E0982B"></i>
+      <i style="background:#5A9E45"></i><i style="background:#2B7FB8"></i>
+    </div>
+
+    <div>
+      <span class="feldtitel">Wer bist du?</span>
+      <div class="namen" id="namensschilder"></div>
+      <input type="text" id="name" maxlength="18" placeholder="Dein Name" autocomplete="off">
+      <input type="text" id="rolle" maxlength="22" placeholder="Rolle, falls du eine hast (optional)" autocomplete="off" style="margin-top:8px;">
+    </div>
+
+    <div>
+      <span class="feldtitel">Was trinkst du?</span>
+      <div class="getraenke" id="getraenke-garderobe"></div>
+    </div>
+
+    <button class="gross" id="reinkommen" type="button" disabled>Reinkommen</button>
+
+    <p class="hinweis" id="garderobe-hinweis"></p>
+  </div>
+</div>
+
+<!-- ===================== Lokal ===================== -->
+<main class="huelle" id="lokal" hidden>
+
+  <div class="kopfleiste">
+    <h1 id="lokal-titel">Stammtisch</h1>
+    <span class="status-pille suchend" id="status"><span class="punkt"></span><span id="status-text">verbinde…</span></span>
+  </div>
+
+  <div class="raum-huelle">
+    <div class="raum" id="raum">
+      <div class="tuer"></div>
+      <div class="tuer-schild">Tür</div>
+      <button class="tresen" id="zone-tresen" type="button" aria-label="An den Tresen stellen"><span>Tresen</span></button>
+      <div id="tische"></div>
+      <div id="murmelringe"></div>
+      <div id="stuehle"></div>
+      <div id="gaeste"></div>
+    </div>
+  </div>
+
+  <div class="hoerweite" id="hoerweite"></div>
+
+  <div class="pult">
+    <div class="pult-block">
+      <span class="feldtitel">Mikrofon</span>
+      <button class="knopf" id="mikro" type="button">Mikrofon einschalten</button>
+    </div>
+    <div class="pult-block">
+      <span class="feldtitel">Dein Glas</span>
+      <div class="getraenke" id="getraenke-pult"></div>
+    </div>
+    <div class="pult-block">
+      <span class="feldtitel">Der Abend</span>
+      <button class="knopf" id="gehen" type="button">Mantel holen</button>
+    </div>
+  </div>
+
+  <div class="anwesend" id="anwesend"></div>
+
+  <section class="deckel-bereich">
+    <h2 id="deckel-titel">Bierdeckel</h2>
+    <p class="hinweis" id="deckel-unter">Worüber redet ihr gerade? Wenn sich das Thema dreht, schreib eine Zeile — der Deckel sammelt mit.</p>
+    <ul class="deckel-liste" id="deckel-liste"></ul>
+    <div class="deckel-neu">
+      <input type="text" id="deckel-eingabe" maxlength="120" placeholder="Neues Thema in einem Satz" autocomplete="off">
+      <button class="knopf" id="deckel-knopf" type="button">Auf den Deckel</button>
+    </div>
+  </section>
+
+  <p class="fusszeile" id="fusszeile"></p>
+</main>
+
+<div id="toene" hidden></div>
+
+<script type="module" src="raum.js"></script>
+</body>
+</html>

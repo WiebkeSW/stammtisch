@@ -1,0 +1,230 @@
+/* Stammtisch — heller Gastraum. Bewusst einfarbig hell, alle Farben explizit. */
+
+:root{
+  --papier:#FCFBF8;
+  --boden:#F1ECE1;
+  --boden-linie:#E7DFCF;
+  --karte:#FFFFFF;
+  --tinte:#26221E;
+  --tinte-weich:#4A443C;
+  --grau:#7C766C;
+  --linie:rgba(38,34,30,.12);
+  --linie-stark:rgba(38,34,30,.26);
+  --amber:#E0982B;
+
+  --sign:"Zilla Slab",Georgia,serif;
+  --body:"Karla","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Courier New",monospace;
+}
+
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+body{
+  margin:0;background:var(--papier);color:var(--tinte);
+  font-family:var(--body);font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--sign);margin:0;line-height:1.1;text-wrap:balance;}
+p{margin:0;}
+button{font-family:inherit;}
+
+.huelle{max-width:960px;margin:0 auto;padding:0 18px 70px;}
+
+/* ---------- Garderobe (Eingang) ---------- */
+.garderobe{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 18px;
+}
+.garderobe-karte{
+  background:var(--karte);border:1px solid var(--linie);border-radius:10px;
+  padding:clamp(24px,4vw,40px);max-width:560px;width:100%;
+  box-shadow:0 14px 40px rgba(38,34,30,.09);
+  display:flex;flex-direction:column;gap:22px;
+}
+.garderobe h1{font-size:clamp(30px,5.5vw,44px);font-weight:700;letter-spacing:-.015em;}
+.farbband{display:flex;height:6px;border-radius:99px;overflow:hidden;}
+.farbband i{flex:1;}
+.feldtitel{
+  font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--grau);display:block;margin-bottom:8px;
+}
+.namen{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;}
+.namenschild{
+  cursor:pointer;background:var(--papier);border:1px solid var(--linie);border-radius:99px;
+  padding:6px 13px;font-size:14px;color:var(--tinte-weich);
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.namenschild:hover{border-color:var(--linie-stark);}
+.namenschild[aria-pressed="true"]{background:var(--tinte);border-color:var(--tinte);color:#fff;}
+input[type="text"]{
+  width:100%;font-family:var(--body);font-size:16px;color:var(--tinte);
+  background:var(--papier);border:1px solid var(--linie-stark);border-radius:6px;padding:11px 13px;
+}
+input[type="text"]:focus-visible,button:focus-visible,select:focus-visible{
+  outline:2px solid var(--tinte);outline-offset:2px;
+}
+.gross{
+  width:100%;background:var(--tinte);color:#fff;border:0;border-radius:7px;
+  padding:15px 20px;font-size:17px;font-weight:700;cursor:pointer;
+}
+.gross:hover{background:#3B342D;}
+.gross:disabled{opacity:.4;cursor:default;}
+.hinweis{font-size:13.5px;color:var(--grau);}
+.hinweis code{font-family:var(--mono);font-size:12.5px;background:var(--papier);padding:1px 5px;border-radius:3px;}
+
+/* ---------- Kopfleiste im Lokal ---------- */
+.kopfleiste{
+  display:flex;flex-wrap:wrap;gap:12px 20px;align-items:baseline;
+  padding:22px 0 18px;border-bottom:1px solid var(--linie);margin-bottom:24px;
+}
+.kopfleiste h1{font-size:24px;font-weight:600;}
+.status-pille{
+  font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  border:1px solid var(--linie);border-radius:99px;padding:4px 11px;color:var(--grau);
+  background:var(--karte);display:inline-flex;align-items:center;gap:7px;
+}
+.status-pille .punkt{width:7px;height:7px;border-radius:50%;background:var(--grau);}
+.status-pille.verbunden{color:#3F7530;border-color:rgba(90,158,69,.45);}
+.status-pille.verbunden .punkt{background:#5A9E45;}
+.status-pille.suchend .punkt{background:var(--amber);animation:pulsieren 1.1s ease-in-out infinite;}
+@keyframes pulsieren{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+/* ---------- Raum ---------- */
+.raum-huelle{overflow-x:auto;padding-bottom:8px;}
+.raum{
+  container-type:inline-size;position:relative;
+  width:100%;min-width:540px;max-width:920px;aspect-ratio:5/3;
+  background:repeating-linear-gradient(91deg,var(--boden) 0 30px,var(--boden-linie) 30px 31px);
+  border:1px solid var(--linie-stark);border-radius:6px;
+  box-shadow:0 10px 30px rgba(38,34,30,.07);
+}
+
+.tisch{
+  position:absolute;transform:translate(-50%,-50%);width:22%;aspect-ratio:1;border-radius:50%;
+  background:var(--tf);display:grid;place-items:center;text-align:center;border:0;padding:0;
+  box-shadow:0 6px 0 var(--tf-tief),0 14px 24px rgba(38,34,30,.16);
+  transition:opacity .4s ease,filter .4s ease;
+}
+.tisch-name{
+  font-family:var(--sign);font-weight:600;font-size:3.4cqw;color:#fff;line-height:1.1;padding-inline:8%;
+}
+.tresen{
+  position:absolute;left:4%;top:7%;width:40%;height:11.5%;
+  background:var(--amber);border:0;border-radius:4px 4px 9px 9px;cursor:pointer;
+  box-shadow:0 5px 0 #B87A1C,0 12px 20px rgba(38,34,30,.15);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .4s ease,filter .4s ease,transform .15s ease;
+}
+.tresen:hover{transform:translateY(-2px);}
+.tresen span{
+  font-family:var(--sign);font-weight:600;font-size:3.2cqw;letter-spacing:.16em;
+  color:#fff;text-transform:uppercase;
+}
+.fern{opacity:.42;filter:saturate(.45);}
+
+/* Gemurmel-Ring: zeigt, dass an einem fernen Tisch geredet wird */
+.murmelring{
+  position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
+  width:27%;aspect-ratio:1;border:3px solid var(--tf);opacity:0;
+  transition:opacity .25s ease,scale .25s ease;scale:1;
+}
+
+.tuer{position:absolute;left:-1px;top:36%;width:1.8%;height:17%;background:var(--amber);border-radius:0 3px 3px 0;}
+.tuer-schild{
+  position:absolute;left:3.6%;top:45%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:2.1cqw;letter-spacing:.14em;color:#A8802F;text-transform:uppercase;
+}
+
+.platz{position:absolute;transform:translate(-50%,-50%);width:9.2%;text-align:center;}
+.platz.steht{width:7.6%;}
+.kreis{
+  width:100%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;
+  font-family:var(--sign);font-weight:600;font-size:3.5cqw;
+  background:var(--karte);border:2.5px solid var(--tf);color:var(--tinte);
+  box-shadow:0 3px 8px rgba(38,34,30,.14);
+}
+.platz.ich .kreis{background:var(--tinte);color:#fff;border-color:var(--tinte);
+  box-shadow:0 0 0 5px rgba(38,34,30,.1),0 4px 10px rgba(38,34,30,.25);}
+.platz.redet .kreis{box-shadow:0 0 0 4px var(--tf),0 3px 8px rgba(38,34,30,.14);}
+.platz .name{
+  font-family:var(--mono);font-size:2.4cqw;color:var(--tinte);margin-top:.4em;white-space:nowrap;
+}
+.gast .name{
+  display:inline-block;background:rgba(255,255,255,.92);border-radius:99px;padding:.1em .55em;
+}
+.stuhl .name{visibility:hidden;}
+.platz.steht .name{display:none;}
+.gast{transition:left .6s cubic-bezier(.4,.05,.2,1),top .6s cubic-bezier(.4,.05,.2,1),opacity .4s ease,filter .4s ease;}
+.glas{position:absolute;right:-18%;bottom:-6%;width:42%;}
+
+.stuhl{cursor:pointer;background:none;border:0;padding:0;}
+.stuhl .kreis{
+  border:2px dashed var(--linie-stark);background:rgba(255,255,255,.5);
+  color:var(--grau);font-family:var(--mono);font-weight:400;font-size:2.2cqw;box-shadow:none;
+  transition:background .2s ease,border-color .2s ease,transform .2s ease,color .2s ease;
+}
+.stuhl:hover .kreis,.stuhl:focus-visible .kreis{
+  border-color:var(--tf);background:#fff;color:var(--tf);transform:scale(1.1);
+}
+.stuhl:focus-visible{outline:none;}
+.stuhl:focus-visible .kreis{box-shadow:0 0 0 3px var(--tf);}
+
+/* ---------- Hörweite ---------- */
+.hoerweite{
+  margin-top:20px;background:var(--karte);border:1px solid var(--linie);
+  border-left:4px solid var(--tf-aktiv,var(--amber));border-radius:5px;
+  padding:15px 17px;max-width:64ch;
+}
+
+/* ---------- Pult ---------- */
+.pult{display:flex;flex-wrap:wrap;gap:20px 30px;align-items:flex-start;margin-top:20px;}
+.pult-block{display:flex;flex-direction:column;gap:8px;}
+.getraenke{display:flex;gap:6px;flex-wrap:wrap;}
+.getraenk{
+  cursor:pointer;background:var(--karte);border:1px solid var(--linie);border-radius:5px;
+  padding:6px 9px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-family:var(--mono);font-size:10px;color:var(--grau);
+}
+.getraenk svg{width:16px;height:22px;}
+.getraenk:hover{border-color:var(--linie-stark);color:var(--tinte);}
+.getraenk[aria-pressed="true"]{border-color:var(--tinte);color:var(--tinte);box-shadow:0 0 0 1px var(--tinte);}
+.knopf{
+  cursor:pointer;background:var(--karte);border:1px solid var(--linie-stark);border-radius:5px;
+  padding:9px 14px;font-weight:700;font-size:14px;color:var(--tinte);
+}
+.knopf:hover{border-color:var(--tinte);}
+.knopf.an{background:var(--tinte);color:#fff;border-color:var(--tinte);}
+
+/* ---------- Wer ist da ---------- */
+.anwesend{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;}
+.tischgruppe{
+  flex:1 1 200px;background:var(--karte);border:1px solid var(--linie);border-radius:6px;
+  border-top:4px solid var(--tf);padding:13px 14px;
+}
+.tischgruppe h3{font-size:14.5px;color:var(--tf-tief);margin-bottom:8px;}
+.tischgruppe ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
+.tischgruppe li{font-size:14px;color:var(--tinte-weich);}
+.rolle{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--grau);}
+.niemand{font-size:14px;color:var(--grau);font-style:italic;}
+
+/* ---------- Bierdeckel ---------- */
+.deckel-bereich{
+  margin-top:30px;background:var(--karte);border:1px solid var(--linie);border-radius:8px;
+  padding:20px 22px;max-width:70ch;
+}
+.deckel-bereich h2{font-size:20px;font-weight:600;margin-bottom:4px;}
+.deckel-liste{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:9px;}
+.deckel-liste li{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:baseline;font-size:15px;}
+.deckel-liste .z{font-family:var(--mono);font-size:11px;color:var(--tf-aktiv,var(--amber));font-variant-numeric:tabular-nums;}
+.deckel-liste b{font-weight:700;}
+.deckel-neu{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
+.deckel-neu input{flex:1 1 240px;}
+
+.fusszeile{
+  margin-top:40px;padding-top:20px;border-top:1px solid var(--linie);
+  font-size:13.5px;color:var(--grau);max-width:70ch;
+}
+
+@media (max-width:640px){
+  .deckel-liste li{grid-template-columns:1fr;gap:2px;}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important;}}
