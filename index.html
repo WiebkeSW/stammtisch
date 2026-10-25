@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stammtisch</title>
-<meta name="description" content="Digitaler Stammtisch — Tische statt Kachelwand, Ton pro Tisch.">
+<meta name="description" content="Digitaler Stammtisch — ein großer Tisch statt Kachelwand, gemütlich wie Omas Wohnzimmer.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Karla:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -17,11 +17,11 @@
   <div class="garderobe-karte">
     <div>
       <h1 id="garderobe-titel">Stammtisch</h1>
-      <p class="hinweis" style="margin-top:6px;" id="garderobe-unter">Komm rein. Erst mal an den Tresen.</p>
+      <p class="hinweis" style="margin-top:6px;" id="garderobe-unter">Komm rein, setz dich dazu.</p>
     </div>
     <div class="farbband">
-      <i style="background:#D6453C"></i><i style="background:#E0982B"></i>
-      <i style="background:#5A9E45"></i><i style="background:#2B7FB8"></i>
+      <i style="background:#D9808A"></i><i style="background:#E0A93B"></i>
+      <i style="background:#8DB36B"></i><i style="background:#5BA39A"></i><i style="background:#6C8EBF"></i>
     </div>
 
     <div>
@@ -61,9 +61,13 @@
 
   <div class="raum-huelle">
     <div class="raum" id="raum">
+      <div class="teppich"></div>
       <div class="tuer"></div>
-      <div class="tuer-schild">Tür</div>
-      <button class="tresen" id="zone-tresen" type="button" aria-label="An den Tresen stellen"><span>Tresen</span></button>
+      <div class="tuer-schild">Eingang</div>
+      <button class="theke" id="zone-theke" type="button" aria-label="An die Kuchentheke stellen"><span>Kuchentheke</span></button>
+      <div class="kueche"><span>Offene Backküche</span></div>
+      <div class="platte" aria-hidden="true"></div>
+      <div class="platte-schild">Plattenspieler</div>
       <div id="tische"></div>
       <div id="murmelringe"></div>
       <div id="stuehle"></div>
@@ -76,7 +80,7 @@
   <!-- Dein Tisch: Anwesenheit, Redestein und Chat direkt am Geschehen, nicht weit weg -->
   <section class="dein-tisch" id="dein-tisch">
     <div class="dt-kopf">
-      <h2 id="deckel-titel">Bierdeckel</h2>
+      <h2 id="deckel-titel">Tischgespräch</h2>
       <div class="dt-wer" id="tisch-wer"></div>
     </div>
     <p class="hinweis" id="deckel-unter"></p>
@@ -85,7 +89,7 @@
 
     <ul class="deckel-liste" id="deckel-liste"></ul>
     <div class="deckel-neu">
-      <input type="text" id="deckel-eingabe" maxlength="140" placeholder="Schreib etwas — alle an deinem Tisch sehen es" autocomplete="off">
+      <input type="text" id="deckel-eingabe" maxlength="140" placeholder="Schreib etwas — alle am Tisch sehen es" autocomplete="off">
       <button class="knopf" id="deckel-knopf" type="button">Senden</button>
     </div>
   </section>
@@ -97,9 +101,14 @@
     </div>
     <div class="pult-block">
       <span class="feldtitel">Der Abend</span>
-      <button class="knopf" id="gehen" type="button">Mantel holen</button>
+      <button class="knopf" id="gehen" type="button">Gehen</button>
     </div>
   </div>
+
+  <details class="karte" id="karte">
+    <summary>Speisekarte</summary>
+    <div class="karte-inhalt" id="karte-inhalt"></div>
+  </details>
 
   <div class="anwesend" id="anwesend"></div>
 

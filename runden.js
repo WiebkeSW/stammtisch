@@ -2,8 +2,8 @@
    runden.js — die Konfiguration des Stammtischs.
 
    Das hier ist die EINZIGE Datei, die eine neue Gruppe anfassen muss.
-   Kopiere den Block unter RUNDEN, gib ihm einen eigenen Schlüssel und eine
-   eigene raumId — fertig ist der Stammtisch einer anderen Kohorte.
+   Kopiere den Block unter RUNDEN, gib ihm einen eigenen Schlüssel — fertig ist
+   der Stammtisch einer anderen Kohorte.
 
    Welche Runde geladen wird, steht in der Adresse:
      index.html?runde=wbg
@@ -21,9 +21,7 @@ export const RUNDEN = {
        Dieser Code liegt öffentlich — ein Schlüssel in der Datei wäre keiner.
        Ohne ?raum landet man im offenen Probierraum unten (PROBIERRAUM). */
     tische: {
-      rot:   {label: 'Roter Tisch',  frage: 'Was habt ihr seit dem Kurs wirklich eingesetzt — und was ist liegengeblieben?'},
-      blau:  {label: 'Blauer Tisch', frage: 'Ich komme bei Automatisierungen immer bis zur Hälfte. Wie macht ihr das fertig?'},
-      gruen: {label: 'Grüner Tisch', frage: null}
+      tisch: {label: 'Der Stammtisch', frage: 'Was habt ihr seit dem Kurs wirklich eingesetzt — und was ist liegengeblieben?'}
     },
     /* Optionale Vorschläge für die Namensauswahl. Leer lassen, wenn der Code
        öffentlich liegt — dann tippt jeder seinen Namen selbst ein. */
@@ -34,9 +32,7 @@ export const RUNDEN = {
   fruehjahr27: {
     titel: 'Stammtisch Kohorte Frühjahr 2027',
     tische: {
-      rot:   {label: 'Roter Tisch',  frage: 'Erste eigene Automatisierung — woran seid ihr hängengeblieben?'},
-      blau:  {label: 'Blauer Tisch', frage: 'Wie überzeugt man eine Chefin, die schon zwei Tools abgeschafft hat?'},
-      gruen: {label: 'Grüner Tisch', frage: 'Wer hat Lust auf eine gemeinsame Übungsrunde zwischendurch?'}
+      tisch: {label: 'Der Stammtisch', frage: 'Erste eigene Automatisierung — woran seid ihr hängengeblieben?'}
     },
     gaeste: []
   }
@@ -48,43 +44,54 @@ export const PROBIERRAUM = 'stammtisch-probierraum';
 
 /* ---------------------------------------------------------------------------
    Ab hier ist alles Einrichtung des Gastraums — die ändert sich pro Gruppe nicht.
+   Alle Maße in Prozent des Raums.
    --------------------------------------------------------------------------- */
 
+/* Zwei Zonen: der große Stammtisch (sitzen) und die Kuchentheke (stehen, wie
+   ein Vorraum — wer dort steht, hört den Tisch nur als Gemurmel). */
 export const TISCHE = {
-  tresen: {label: 'Tresen',        farbe: '#E0982B', tief: '#B87A1C'},
-  rot:    {label: 'Roter Tisch',   farbe: '#D6453C', tief: '#A32F28', x: 70, y: 30},
-  blau:   {label: 'Blauer Tisch',  farbe: '#2B7FB8', tief: '#1B5D8C', x: 27, y: 71},
-  gruen:  {label: 'Grüner Tisch',  farbe: '#5A9E45', tief: '#3F7530', x: 73, y: 75}
+  theke: {label: 'Kuchentheke',     farbe: '#D9A441', tief: '#A9741F'},
+  tisch: {label: 'Der Stammtisch',  farbe: '#A9794F', tief: '#7A5233', x: 50, y: 54, w: 37.9, h: 32.6}
 };
 
-/* Feste Stühle an den Tischen. Der Tresen hat keine — dort steht man,
-   deshalb werden die Plätze dort zur Laufzeit ausgerechnet. */
+/* Acht Plätze rund um den ovalen Tisch, jeder Stuhl in einer eigenen Farbe.
+   Mehr als acht Leute? Dann einfach weitere Zeilen ergänzen. */
 export const STUEHLE = [
-  {id: 'rot-1',   zone: 'rot',   x: 70.0, y: 10.8},
-  {id: 'rot-2',   zone: 'rot',   x: 80.9, y: 24.1},
-  {id: 'rot-3',   zone: 'rot',   x: 76.8, y: 45.5},
-  {id: 'rot-4',   zone: 'rot',   x: 63.2, y: 45.5},
-  {id: 'rot-5',   zone: 'rot',   x: 59.1, y: 24.1},
-
-  {id: 'blau-1',  zone: 'blau',  x: 27.0, y: 51.8},
-  {id: 'blau-2',  zone: 'blau',  x: 37.9, y: 65.1},
-  {id: 'blau-3',  zone: 'blau',  x: 33.8, y: 86.5},
-  {id: 'blau-4',  zone: 'blau',  x: 20.2, y: 86.5},
-  {id: 'blau-5',  zone: 'blau',  x: 16.1, y: 65.1},
-
-  {id: 'gruen-1', zone: 'gruen', x: 73.0, y: 55.8},
-  {id: 'gruen-2', zone: 'gruen', x: 83.9, y: 69.1},
-  {id: 'gruen-3', zone: 'gruen', x: 79.8, y: 90.5},
-  {id: 'gruen-4', zone: 'gruen', x: 66.2, y: 90.5},
-  {id: 'gruen-5', zone: 'gruen', x: 62.1, y: 69.1}
+  {id: 'tisch-1', zone: 'tisch', x: 27.0, y: 43.9, farbe: '#5BA39A'},
+  {id: 'tisch-2', zone: 'tisch', x: 40.5, y: 29.5, farbe: '#E0A93B'},
+  {id: 'tisch-3', zone: 'tisch', x: 59.5, y: 29.5, farbe: '#D9808A'},
+  {id: 'tisch-4', zone: 'tisch', x: 73.0, y: 43.9, farbe: '#8DB36B'},
+  {id: 'tisch-5', zone: 'tisch', x: 73.0, y: 63.9, farbe: '#C8683F'},
+  {id: 'tisch-6', zone: 'tisch', x: 59.5, y: 78.4, farbe: '#6C8EBF'},
+  {id: 'tisch-7', zone: 'tisch', x: 40.5, y: 78.4, farbe: '#B58AC4'},
+  {id: 'tisch-8', zone: 'tisch', x: 27.0, y: 63.9, farbe: '#E08A3C'}
 ];
 
 export const GETRAENKE = [
-  {id: 'helles',  name: 'Helles',  farbe: '#E0982B'},
-  {id: 'rotwein', name: 'Rotwein', farbe: '#8A2B3F'},
-  {id: 'spezi',   name: 'Spezi',   farbe: '#5A3620'},
-  {id: 'schorle', name: 'Schorle', farbe: '#D2C14A'},
-  {id: 'tee',     name: 'Tee',     farbe: '#C07A2E'},
-  {id: 'kaffee',  name: 'Kaffee',  farbe: '#43291A'},
-  {id: 'wasser',  name: 'Wasser',  farbe: '#7FB4C8'}
+  {id: 'helles',    name: 'Helles',        farbe: '#E6B84A', gruppe: 'Bier'},
+  {id: 'weissbier', name: 'Weißbier',      farbe: '#EFD27A', gruppe: 'Bier'},
+  {id: 'radler',    name: 'Radler',        farbe: '#E8D86A', gruppe: 'Bier'},
+
+  {id: 'weisswein', name: 'Weißwein',      farbe: '#E9E08B', gruppe: 'Wein und Sekt'},
+  {id: 'rotwein',   name: 'Rotwein',       farbe: '#8A2B3F', gruppe: 'Wein und Sekt'},
+  {id: 'gespritzt', name: 'Gespritzter',   farbe: '#EFEBB5', gruppe: 'Wein und Sekt'},
+  {id: 'sekt',      name: 'Sekt',          farbe: '#F4EAB0', gruppe: 'Wein und Sekt'},
+  {id: 'aperol',    name: 'Aperol Spritz', farbe: '#F07A3A', gruppe: 'Wein und Sekt'},
+
+  {id: 'melange',   name: 'Melange',       farbe: '#C9A27A', gruppe: 'Warm'},
+  {id: 'kaffee',    name: 'Kaffee',        farbe: '#43291A', gruppe: 'Warm'},
+  {id: 'tee',       name: 'Tee',           farbe: '#C07A2E', gruppe: 'Warm'},
+
+  {id: 'wasser',    name: 'Wasser',        farbe: '#7FB4C8', gruppe: 'Ohne Alkohol'},
+  {id: 'spezi',     name: 'Spezi',         farbe: '#5A3620', gruppe: 'Ohne Alkohol'},
+  {id: 'schorle',   name: 'Saftschorle',   farbe: '#D2C14A', gruppe: 'Ohne Alkohol'},
+
+  {id: 'eierlikoer', name: 'Eierlikör',    farbe: '#F2C94C', gruppe: 'Zum Schluss'}
+];
+
+export const STANDARD_GETRAENK = 'wasser';
+
+/* Die Speisekarte steht nur zum Anschauen da — gewählt wird nur das Getränk. */
+export const SPEISEKARTE = [
+  {titel: 'Zum Essen', eintraege: ['Wiener Schnitzel', 'Stück Kuchen']}
 ];

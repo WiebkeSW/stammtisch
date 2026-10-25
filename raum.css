@@ -1,16 +1,16 @@
-/* Stammtisch — heller Gastraum. Bewusst einfarbig hell, alle Farben explizit. */
+/* Stammtisch — Omas Wohnzimmer: warm, bunt, hell. Alle Farben explizit. */
 
 :root{
-  --papier:#FCFBF8;
-  --boden:#F1ECE1;
-  --boden-linie:#E7DFCF;
+  --papier:#FFF9EF;
+  --boden:#F6E6CE;
+  --boden-linie:#EFDCBE;
   --karte:#FFFFFF;
-  --tinte:#26221E;
+  --tinte:#3A2A20;
   --tinte-weich:#4A443C;
   --grau:#7C766C;
   --linie:rgba(38,34,30,.12);
   --linie-stark:rgba(38,34,30,.26);
-  --amber:#E0982B;
+  --amber:#D9A441;
 
   --sign:"Zilla Slab",Georgia,serif;
   --body:"Karla","Helvetica Neue",Arial,sans-serif;
@@ -119,61 +119,86 @@ input[type="text"]:focus-visible,button:focus-visible,select:focus-visible{
 .raum-huelle{overflow-x:auto;padding-bottom:8px;}
 .raum{
   container-type:inline-size;position:relative;
-  width:100%;min-width:540px;max-width:920px;aspect-ratio:5/3;
-  background:repeating-linear-gradient(91deg,var(--boden) 0 30px,var(--boden-linie) 30px 31px);
-  border:1px solid var(--linie-stark);border-radius:6px;
-  box-shadow:0 10px 30px rgba(38,34,30,.07);
+  width:100%;min-width:540px;max-width:920px;aspect-ratio:17/10;
+  background:var(--boden);overflow:hidden;
+  border:1px solid var(--linie-stark);border-radius:10px;
+  box-shadow:0 10px 30px rgba(58,42,32,.10);
+}
+/* Tapete mit Punkten, oben */
+.raum::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:17%;
+  background:#EBC4B0 radial-gradient(circle,#F6E6CE 0 .5cqw,transparent .56cqw) 0 0/6cqw 3.6cqw;
+}
+.teppich{
+  position:absolute;left:50%;top:54%;width:62%;height:68%;transform:translate(-50%,-50%);
+  border-radius:50%;background:rgba(217,165,142,.5);
 }
 
 .tisch{
-  position:absolute;transform:translate(-50%,-50%);width:22%;aspect-ratio:1;border-radius:50%;
+  position:absolute;transform:translate(-50%,-50%);border-radius:50%;
   background:var(--tf);display:grid;place-items:center;text-align:center;border:0;padding:0;
-  box-shadow:0 6px 0 var(--tf-tief),0 14px 24px rgba(38,34,30,.16);
+  box-shadow:0 .8cqw 0 var(--tf-tief),0 2cqw 3cqw rgba(58,42,32,.2);
   transition:opacity .4s ease,filter .4s ease;
 }
-.tisch-name{
-  font-family:var(--sign);font-weight:600;font-size:3.4cqw;color:#fff;line-height:1.1;padding-inline:8%;
+/* Häkeldeckchen in der Tischmitte */
+.tisch::before{
+  content:"";position:absolute;left:50%;top:50%;width:34%;height:40%;transform:translate(-50%,-50%);
+  border-radius:50%;background:#FBF6EC;border:.25cqw dashed #D8C8A8;
 }
-.tresen{
-  position:absolute;left:4%;top:7%;width:40%;height:11.5%;
-  background:var(--amber);border:0;border-radius:4px 4px 9px 9px;cursor:pointer;
-  box-shadow:0 5px 0 #B87A1C,0 12px 20px rgba(38,34,30,.15);
+.tisch-name{
+  position:relative;font-family:var(--sign);font-weight:600;font-size:2.6cqw;color:#5A3A2A;line-height:1.1;
+}
+.theke{
+  position:absolute;left:3%;top:3.2%;width:22.7%;height:10.5%;
+  background:#F9F3E8;border:.25cqw solid #C98A6B;border-radius:.8cqw;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
+  box-shadow:0 .5cqw 0 rgba(201,138,107,.5);
   transition:opacity .4s ease,filter .4s ease,transform .15s ease;
 }
-.tresen:hover{transform:translateY(-2px);}
-.tresen span{
-  font-family:var(--sign);font-weight:600;font-size:3.2cqw;letter-spacing:.16em;
-  color:#fff;text-transform:uppercase;
+.theke:hover{transform:translateY(-2px);}
+.theke span,.kueche span{font-family:var(--sign);font-weight:600;font-size:2.1cqw;color:#5A3A2A;}
+.kueche{
+  position:absolute;right:3%;top:3.2%;width:22.7%;height:10.5%;
+  background:#D9A441;border:.25cqw solid #A9741F;border-radius:.8cqw;
+  display:flex;align-items:center;justify-content:center;
 }
-.fern{opacity:.42;filter:saturate(.45);}
+.kueche span{color:#3F2A12;}
+.platte{
+  position:absolute;left:50%;top:8.4%;width:4.4%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle,#F6E6CE 0 8%,#C8683F 9% 24%,#2F2A26 25%);
+}
+.platte-schild{
+  position:absolute;left:50%;top:13.5%;transform:translateX(-50%);
+  font-family:var(--mono);font-size:1.5cqw;color:#5A3A2A;white-space:nowrap;
+}
+.fern{opacity:.5;filter:saturate(.55);}
 
-/* Gemurmel-Ring: zeigt, dass an einem fernen Tisch geredet wird */
+/* Gemurmel-Ring: zeigt, dass am fernen Tisch geredet wird */
 .murmelring{
   position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
-  width:27%;aspect-ratio:1;border:3px solid var(--tf);opacity:0;
+  border:3px solid var(--tf);opacity:0;
   transition:opacity .25s ease,scale .25s ease;scale:1;
 }
 
-.tuer{position:absolute;left:-1px;top:36%;width:1.8%;height:17%;background:var(--amber);border-radius:0 3px 3px 0;}
+.tuer{position:absolute;left:0;top:84%;width:1.2%;height:13%;background:var(--amber);border-radius:0 3px 3px 0;}
 .tuer-schild{
-  position:absolute;left:3.6%;top:45%;transform:translateY(-50%);
-  font-family:var(--mono);font-size:2.1cqw;letter-spacing:.14em;color:#A8802F;text-transform:uppercase;
+  position:absolute;left:2.4%;top:90.5%;
+  font-family:var(--mono);font-size:1.7cqw;letter-spacing:.14em;color:#8A6A1E;text-transform:uppercase;
 }
 
-.platz{position:absolute;transform:translate(-50%,-50%);width:9.2%;text-align:center;}
-.platz.steht{width:7.6%;}
+.platz{position:absolute;transform:translate(-50%,-50%);width:7.2%;text-align:center;}
+.platz.steht{width:6.4%;}
 .kreis{
   width:100%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;
-  font-family:var(--sign);font-weight:600;font-size:3.5cqw;
-  background:var(--karte);border:2.5px solid var(--tf);color:var(--tinte);
-  box-shadow:0 3px 8px rgba(38,34,30,.14);
+  font-family:var(--sign);font-weight:600;font-size:2.8cqw;
+  background:var(--tf);border:.35cqw solid rgba(58,42,32,.8);color:var(--tinte);
+  box-shadow:0 3px 8px rgba(58,42,32,.18);
 }
 .platz.ich .kreis{background:var(--tinte);color:#fff;border-color:var(--tinte);
-  box-shadow:0 0 0 5px rgba(38,34,30,.1),0 4px 10px rgba(38,34,30,.25);}
-.platz.redet .kreis{box-shadow:0 0 0 4px var(--tf),0 3px 8px rgba(38,34,30,.14);}
+  box-shadow:0 0 0 5px rgba(58,42,32,.14),0 4px 10px rgba(58,42,32,.28);}
+.platz.redet .kreis{box-shadow:0 0 0 .7cqw rgba(58,42,32,.35),0 3px 8px rgba(58,42,32,.18);}
 .platz .name{
-  font-family:var(--mono);font-size:2.4cqw;color:var(--tinte);margin-top:.4em;white-space:nowrap;
+  font-family:var(--mono);font-size:1.9cqw;color:var(--tinte);margin-top:.4em;white-space:nowrap;
 }
 .gast .name{
   display:inline-block;background:rgba(255,255,255,.92);border-radius:99px;padding:.1em .55em;
@@ -181,23 +206,23 @@ input[type="text"]:focus-visible,button:focus-visible,select:focus-visible{
 .stuhl .name{visibility:hidden;}
 .platz.steht .name{display:none;}
 .gast{transition:left .6s cubic-bezier(.4,.05,.2,1),top .6s cubic-bezier(.4,.05,.2,1),opacity .4s ease,filter .4s ease;}
-.glas{position:absolute;right:-18%;bottom:-6%;width:42%;}
+.glas{position:absolute;right:-26%;bottom:-8%;width:44%;}
 .ton-status{
   position:absolute;left:-14%;bottom:-8%;width:38%;aspect-ratio:1;border-radius:50%;
-  display:grid;place-items:center;font-size:2cqw;line-height:1;background:#fff;
-  box-shadow:0 2px 5px rgba(38,34,30,.3);
+  display:grid;place-items:center;font-size:1.7cqw;line-height:1;background:#fff;
+  box-shadow:0 2px 5px rgba(58,42,32,.3);
 }
-.ton-status.ok{background:#5A9E45;}
-.ton-status.warnung{background:#E0982B;animation:pulsieren 1.3s ease-in-out infinite;}
+.ton-status.ok{background:#8DB36B;}
+.ton-status.warnung{background:#E0A93B;animation:pulsieren 1.3s ease-in-out infinite;}
 
 .stuhl{cursor:pointer;background:none;border:0;padding:0;}
 .stuhl .kreis{
-  border:2px dashed var(--linie-stark);background:rgba(255,255,255,.5);
-  color:var(--grau);font-family:var(--mono);font-weight:400;font-size:2.2cqw;box-shadow:none;
-  transition:background .2s ease,border-color .2s ease,transform .2s ease,color .2s ease;
+  border:2px dashed var(--tf);background:rgba(255,255,255,.55);
+  color:var(--tinte-weich);font-family:var(--mono);font-weight:400;font-size:1.9cqw;box-shadow:none;
+  transition:background .2s ease,transform .2s ease,color .2s ease;
 }
 .stuhl:hover .kreis,.stuhl:focus-visible .kreis{
-  border-color:var(--tf);background:#fff;color:var(--tf);transform:scale(1.1);
+  background:var(--tf);color:var(--tinte);transform:scale(1.1);
 }
 .stuhl:focus-visible{outline:none;}
 .stuhl:focus-visible .kreis{box-shadow:0 0 0 3px var(--tf);}
@@ -212,7 +237,17 @@ input[type="text"]:focus-visible,button:focus-visible,select:focus-visible{
 /* ---------- Pult ---------- */
 .pult{display:flex;flex-wrap:wrap;gap:20px 30px;align-items:flex-start;margin-top:20px;}
 .pult-block{display:flex;flex-direction:column;gap:8px;}
-.getraenke{display:flex;gap:6px;flex-wrap:wrap;}
+.getraenke{display:flex;gap:10px 18px;flex-wrap:wrap;}
+.getraenke-gruppe{display:flex;flex-direction:column;gap:5px;}
+.getraenke-reihe{display:flex;gap:6px;flex-wrap:wrap;}
+.gruppenname{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--grau);}
+
+/* ---------- Speisekarte (nur zum Anschauen) ---------- */
+.karte{margin-top:22px;max-width:70ch;}
+.karte summary{cursor:pointer;font-family:var(--sign);font-weight:600;font-size:17px;}
+.karte-inhalt{margin-top:10px;background:var(--karte);border:1px solid var(--linie);border-radius:8px;padding:12px 16px;}
+.karte-inhalt ul{margin:6px 0 0;padding-left:18px;}
+
 .getraenk{
   cursor:pointer;background:var(--karte);border:1px solid var(--linie);border-radius:5px;
   padding:6px 9px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;

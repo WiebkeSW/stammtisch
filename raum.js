@@ -22,14 +22,14 @@
    ========================================================================== */
 
 import {joinRoom, selfId} from 'https://cdn.jsdelivr.net/npm/@trystero-p2p/nostr@0.25.4/+esm';
-import {RUNDEN, STANDARD_RUNDE, PROBIERRAUM, TISCHE, STUEHLE, GETRAENKE} from './runden.js';
+import {RUNDEN, STANDARD_RUNDE, PROBIERRAUM, TISCHE, STUEHLE, GETRAENKE, STANDARD_GETRAENK, SPEISEKARTE} from './runden.js';
 
 /* ---------- Welche Runde, welcher Raum? ---------- */
 const params = new URLSearchParams(location.search);
 const rundenSchluessel = RUNDEN[params.get('runde')] ? params.get('runde') : STANDARD_RUNDE;
 const RUNDE = RUNDEN[rundenSchluessel];
-const ZONEN = ['tresen', 'rot', 'blau', 'gruen'];
-const TISCHZONEN = ['rot', 'blau', 'gruen'];
+const ZONEN = ['theke', 'tisch'];
+const TISCHZONEN = ['tisch'];
 
 /* Der Raumschlüssel kommt aus dem Link, nicht aus dem Code — dieser Code liegt
    öffentlich. Alle mit demselben ?raum= landen im selben Lokal. */
@@ -37,7 +37,7 @@ const raumSchluessel = (params.get('raum') || '').trim().slice(0, 60) || PROBIER
 const istProbierraum = raumSchluessel === PROBIERRAUM;
 
 /* ---------- Zustand ---------- */
-const ich = {name: '', rolle: '', zone: 'tresen', stuhl: null, getraenk: 'helles', seit: Date.now(), mikroAn: false};
+const ich = {name: '', rolle: '', zone: 'theke', stuhl: null, getraenk: STANDARD_GETRAENK, seit: Date.now(), mikroAn: false};
 const gaeste = new Map();              // peerId -> Zustand
 const pegel = new Map();               // peerId -> 0..1 (selbst gemessen, gesendet)
 const audioGraph = new Map();          // peerId -> {quelle, filter, gain}
@@ -67,11 +67,10 @@ function aufzaehlen(a){
   return a.slice(0, -1).join(', ') + ' und ' + a[a.length - 1];
 }
 function tischLabel(z){
-  return z === 'tresen' ? 'Tresen' : RUNDE.tische[z].label;
+  return z === 'theke' ? 'Kuchentheke' : RUNDE.tische[z].label;
 }
 function zonenName(z){
-  if(z === 'tresen') return 'am Tresen';
-  return 'am ' + tischLabel(z).toLowerCase().replace('er tisch', 'en Tisch');
+  return z === 'theke' ? 'an der Kuchentheke' : 'am Stammtisch';
 }
 function escape(s){
   return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -119,7 +118,16 @@ function pruefeGarderobe(){
 
 function baueGetraenke(behaelter){
   behaelter.innerHTML = '';
-  GETRAENKE.forEach(g => {
+  const gruppen = [...new Set(GETRAENKE.map(g => g.gruppe))];
+  gruppen.forEach(gruppe => {
+   const kasten = document.createElement('div');
+   kasten.className = 'getraenke-gruppe';
+   kasten.innerHTML = '<span class="gruppenname">' + escape(gruppe) + '</span>';
+   const reihe = document.createElement('div');
+   reihe.className = 'getraenke-reihe';
+   kasten.appendChild(reihe);
+   behaelter.appendChild(kasten);
+   GETRAENKE.filter(g => g.gruppe === gruppe).forEach(g => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'getraenk';
@@ -133,10 +141,16 @@ function baueGetraenke(behaelter){
       if(sendeZustand) sendeZustand(ich);
       zeichneRaum();
     });
-    behaelter.appendChild(b);
+    reihe.appendChild(b);
+   });
   });
 }
 baueGetraenke($('getraenke-garderobe'));
+
+/* Die Speisekarte ist nur zum Anschauen — gewählt wird nur das Getränk. */
+$('karte-inhalt').innerHTML = SPEISEKARTE.map(k =>
+  '<div><span class="gruppenname">' + escape(k.titel) + '</span><ul>' +
+  k.eintraege.map(e => '<li>' + escape(e) + '</li>').join('') + '</ul></div>').join('');
 
 $('garderobe-hinweis').innerHTML =
   'Der Raum läuft direkt zwischen den Browsern — kein Konto, keine Installation. ' +
@@ -298,7 +312,7 @@ function stelleAudioMix(){
     gaeste.forEach((g, id) => { if(g.zone === z) laut = Math.max(laut, pegel.get(id) || 0); });
     const fremd = z !== ich.zone;
     ring.style.opacity = fremd && laut > 0.06 ? String(Math.min(0.55, laut)) : '0';
-    ring.style.scale = String(1 + Math.min(0.09, laut * 0.12));
+    ring.style.scale = String(1 + Math.min(0.05, laut * 0.08));
   });
 }
 
@@ -315,6 +329,16 @@ function betreteRaum(){
 
   baueRaum();
   baueGetraenke($('getraenke-pult'));
+
+  /* Es gibt nur einen Tisch — man setzt sich gleich hin. Zufälliger freier
+     Stuhl, damit nicht alle gleichzeitig denselben nehmen; den Rest regelt
+     der Stuhl-Streit weiter unten. */
+  const freie = STUEHLE.filter(s => !belegt(s.id));
+  if(freie.length){
+    ich.zone = 'tisch';
+    ich.stuhl = freie[Math.floor(Math.random() * freie.length)].id;
+    ich.seit = Date.now();
+  }
 
   raum = joinRoom({appId: 'skillsprinters-stammtisch'}, raumSchluessel);
 
@@ -438,8 +462,8 @@ function betreteRaum(){
         'Link hängen — <code>?raum=euer-schluessel</code> — und nur diesen Link teilen. '
       : 'Ihr seid im Raum <code>' + escape(raumSchluessel) + '</code>. ') +
     'Diesen Link teilen, dann sind alle im selben Lokal:<br><code>' + escape(location.href.split('#')[0]) + '</code><br><br>' +
-    'Behelfslösung ohne eigenen Server: die Bierdeckel leben, solange jemand im Raum ist. ' +
-    'Wer als Letzter geht, kopiert sie am besten raus.';
+    'Behelfslösung ohne eigenen Server: das Tischgespräch lebt, solange jemand im Raum ist. ' +
+    'Wer als Letzter geht, kopiert es am besten raus.';
 }
 
 function setzeStatus(){
@@ -461,7 +485,7 @@ function loeseSitzKonflikt(peerId, zustand){
   if(!fremdFrueher) return;
   const frei = STUEHLE.filter(s => s.zone === ich.zone && !belegt(s.id));
   if(frei.length) setzePlatz(ich.zone, frei[0].id);
-  else setzePlatz('tresen', null);
+  else setzePlatz('theke', null);
 }
 
 function belegt(stuhlId){
@@ -498,6 +522,8 @@ function baueRaum(){
     ring.id = 'ring-' + z;
     ring.style.left = t.x + '%';
     ring.style.top = t.y + '%';
+    ring.style.width = (t.w + 7) + '%';
+    ring.style.height = (t.h + 9) + '%';
     ring.style.setProperty('--tf', t.farbe);
     ringe.appendChild(ring);
 
@@ -506,26 +532,28 @@ function baueRaum(){
     d.id = 'zone-' + z;
     d.style.left = t.x + '%';
     d.style.top = t.y + '%';
+    d.style.width = t.w + '%';
+    d.style.height = t.h + '%';
     d.style.setProperty('--tf', t.farbe);
     d.style.setProperty('--tf-tief', t.tief);
-    d.innerHTML = '<span class="tisch-name">' + escape(RUNDE.tische[z].label).replace(' ', '<br>') + '</span>';
+    d.innerHTML = '<span class="tisch-name">' + escape(RUNDE.tische[z].label) + '</span>';
     tische.appendChild(d);
   });
-  $('zone-tresen').style.setProperty('--tf', TISCHE.tresen.farbe);
-  $('zone-tresen').addEventListener('click', () => setzePlatz('tresen', null));
+  $('zone-theke').style.setProperty('--tf', TISCHE.theke.farbe);
+  $('zone-theke').addEventListener('click', () => setzePlatz('theke', null));
 }
 
-/* Am Tresen gibt es keine Stühle — dort wird gestanden, also rechnen wir die
-   Positionen aus der Anzahl aus. Wie in echt: es wird enger, nicht voller. */
-function tresenPositionen(anzahl){
+/* An der Kuchentheke gibt es keine Stühle — dort wird gestanden, also rechnen
+   wir die Positionen aus der Anzahl aus. Bis vier pro Reihe, dann eine zweite. */
+function thekePositionen(anzahl){
   const aus = [];
-  const reihen = Math.ceil(anzahl / 6) || 1;
+  const reihen = Math.ceil(anzahl / 4) || 1;
   let index = 0;
   for(let r = 0; r < reihen; r++){
-    const inReihe = Math.min(6, anzahl - index);
-    const schritt = 34 / inReihe;
+    const inReihe = Math.min(4, anzahl - index);
+    const schritt = 22 / inReihe;
     for(let s = 0; s < inReihe; s++){
-      aus.push({x: 7 + schritt * (s + 0.5), y: reihen === 1 ? 26 : 23.5 + r * 8.5});
+      aus.push({x: 4 + schritt * (s + 0.5), y: 22 + r * 9});
       index++;
     }
   }
@@ -541,20 +569,23 @@ function alleLeute(){
 
 function zeichneRaum(){
   const leute = alleLeute();
-  const amTresen = leute.filter(l => l.z.zone === 'tresen');
-  const tresenPlaetze = tresenPositionen(amTresen.length);
+  const ander = leute.filter(l => l.z.zone === 'theke');
+  const thekePlaetze = thekePositionen(ander.length);
 
   /* Gäste */
   const behaelter = $('gaeste');
   const gesehen = new Set();
   leute.forEach(l => {
     let pos;
-    if(l.z.zone === 'tresen'){
-      pos = tresenPlaetze[amTresen.indexOf(l)] || {x: 24, y: 26};
+    let farbe;
+    if(l.z.zone === 'theke'){
+      pos = thekePlaetze[ander.indexOf(l)] || {x: 14, y: 22};
+      farbe = TISCHE.theke.farbe;
     }else{
       const s = stuhlVon(l.z.stuhl);
       if(!s) return;
       pos = {x: s.x, y: s.y};
+      farbe = s.farbe;
     }
     gesehen.add(l.id);
 
@@ -566,12 +597,11 @@ function zeichneRaum(){
       el.innerHTML = '<div class="kreis"></div><div class="name"></div>';
       behaelter.appendChild(el);
     }
-    const farbe = TISCHE[l.z.zone].farbe;
     el.style.left = pos.x + '%';
     el.style.top = pos.y + '%';
     el.style.setProperty('--tf', farbe);
     el.classList.toggle('ich', l.id === selfId);
-    el.classList.toggle('steht', l.z.zone === 'tresen');
+    el.classList.toggle('steht', l.z.zone === 'theke');
     el.classList.toggle('fern', l.z.zone !== ich.zone);
     el.classList.toggle('redet', (l.id === selfId ? 0 : (pegel.get(l.id) || 0)) > 0.12);
     el.title = l.z.name + (l.z.rolle ? ' · ' + l.z.rolle : '');
@@ -599,7 +629,7 @@ function zeichneRaum(){
     b.className = 'platz stuhl';
     b.style.left = s.x + '%';
     b.style.top = s.y + '%';
-    b.style.setProperty('--tf', TISCHE[s.zone].farbe);
+    b.style.setProperty('--tf', s.farbe);
     b.setAttribute('aria-label', 'Freier Platz ' + zonenName(s.zone) + ', hier hinsetzen');
     b.innerHTML = '<div class="kreis">frei</div><div class="name">&nbsp;</div>';
     b.addEventListener('click', () => setzePlatz(s.zone, s.id));
@@ -607,7 +637,7 @@ function zeichneRaum(){
   });
 
   /* Ferne Zonen dämpfen */
-  ZONEN.forEach(z => {
+  TISCHZONEN.forEach(z => {
     const el = $('zone-' + z);
     if(el) el.classList.toggle('fern', z !== ich.zone);
   });
@@ -623,14 +653,14 @@ function zeichneHoerweite(){
 
   let txt;
   if(!nachbarn.length){
-    txt = ich.zone === 'tresen'
-      ? 'Du stehst allein am Tresen. Sobald jemand reinkommt, landet er auch hier.'
-      : 'Du sitzt allein ' + zonenName(ich.zone) + '. Wer sich dazusetzt, bestimmt das Thema.';
-  }else if(ich.zone === 'tresen'){
-    txt = 'Du stehst am Tresen, mit ' + aufzaehlen(nachbarn) + '. Von den Tischen kommt nur Gemurmel.';
+    txt = ich.zone === 'theke'
+      ? 'Du stehst allein an der Kuchentheke. Sobald jemand reinkommt, sitzt er am Stammtisch.'
+      : 'Du sitzt allein am Stammtisch. Wer sich dazusetzt, bestimmt das Thema.';
+  }else if(ich.zone === 'theke'){
+    txt = 'Du stehst an der Kuchentheke, mit ' + aufzaehlen(nachbarn) + '. Vom Stammtisch kommt nur Gemurmel.';
   }else{
-    txt = 'Du sitzt ' + zonenName(ich.zone) + ', bei ' + aufzaehlen(nachbarn) +
-          '. Nur diese Runde hört dich klar — die anderen Tische bleiben Hintergrundgeräusch.';
+    txt = 'Du sitzt am Stammtisch, bei ' + aufzaehlen(nachbarn) +
+          '. Wer an der Kuchentheke steht, hört euch nur als leises Gemurmel.';
   }
   if(!meinStream) txt += ' <strong>Dein Mikrofon ist aus</strong> — du hörst mit, sagst aber nichts. Schreib unten, wenn du was loswerden willst.';
   el.innerHTML = txt;
@@ -651,7 +681,7 @@ function zeichneAnwesend(){
           (l.id === selfId ? ' <span class="rolle">du</span>' : '') +
           (l.z.rolle ? ' <span class="rolle">' + escape(l.z.rolle) + '</span>' : '') +
           (l.id !== selfId && !l.z.mikroAn ? ' <span class="rolle">schreibt nur</span>' : '') + '</li>').join('') + '</ul>'
-      : '<p class="niemand">' + (z === 'tresen' ? 'Niemand am Tresen.' : 'Noch frei — Platz für fünf.') + '</p>');
+      : '<p class="niemand">' + (z === 'theke' ? 'Niemand an der Kuchentheke.' : 'Noch niemand — Platz für ' + STUEHLE.length + '.') + '</p>');
     behaelter.appendChild(box);
   });
 }
@@ -664,13 +694,13 @@ function zeichneAnwesend(){
 function zeichneDeckel(){
   const zone = ich.zone;
   const liste = $('deckel-liste');
-  const amTisch = zone !== 'tresen';
+  const amTisch = zone !== 'theke';
 
-  $('deckel-titel').textContent = amTisch ? 'Bierdeckel · ' + tischLabel(zone) : 'Am Tresen';
+  $('deckel-titel').textContent = amTisch ? 'Tischgespräch' : 'An der Kuchentheke';
   $('deckel-unter').textContent = amTisch
-    ? 'Für alle an diesem Tisch sichtbar — auch wenn bei jemandem der Ton mal nicht geht.'
+    ? 'Für alle am Tisch sichtbar — auch wenn bei jemandem der Ton mal nicht geht.'
     : 'Sag Hallo, oder schreib, falls dein Mikrofon nicht mitmacht.';
-  $('deckel-eingabe').placeholder = amTisch ? 'Schreib etwas — alle an deinem Tisch sehen es' : 'Schreib etwas an den Tresen';
+  $('deckel-eingabe').placeholder = amTisch ? 'Schreib etwas — alle am Tisch sehen es' : 'Schreib etwas an die Kuchentheke';
   $('hoerweite').style.setProperty('--tf-aktiv', TISCHE[zone].farbe);
   liste.style.setProperty('--tf-aktiv', TISCHE[zone].farbe);
   $('dein-tisch').style.setProperty('--tf-aktiv', TISCHE[zone].farbe);
@@ -714,12 +744,12 @@ $('deckel-eingabe').addEventListener('keydown', e => { if(e.key === 'Enter') neu
 /* ===========================================================================
    Redestein — optionale Gesprächsordnung für einen Tisch, der es chaotisch
    findet. Niemand wird stummgeschaltet, nur deutlich leiser, solange
-   jemand anders den Stein hält. Am Tresen gibt es keinen (steht ja eh).
+   jemand anders den Stein hält. An der Kuchentheke gibt es keinen (steht ja eh).
    =========================================================================== */
 function zeichneRedestein(){
   const leiste = $('redestein-leiste');
   const zone = ich.zone;
-  if(zone === 'tresen'){ leiste.hidden = true; return; }
+  if(zone === 'theke'){ leiste.hidden = true; return; }
   leiste.hidden = false;
 
   const rs = redesteine.get(zone);
@@ -771,14 +801,14 @@ function zeichneRedestein(){
    =========================================================================== */
 function zeigeTourFallsNeu(){
   let gesehen = false;
-  try{ gesehen = localStorage.getItem('stammtisch-tour-v1') === '1'; }catch(e){}
+  try{ gesehen = localStorage.getItem('stammtisch-tour-v2') === '1'; }catch(e){}
   if(gesehen) return;
 
   const schritte = [
-    {icon: '👀', titel: 'Das bist du', text: 'Der dunkle Kreis mit deinem Namen im Raum oben. Du stehst gerade am Tresen — dem Eingang.'},
+    {icon: '👀', titel: 'Das bist du', text: 'Der dunkle Kreis mit deinem Namen im Raum oben. Du sitzt schon am großen Stammtisch.'},
     {icon: '🎙️', titel: 'Diese Zeile zeigt: wirst du gehört?', text: 'Grün heißt, dein Mikrofon läuft und alle können dich hören. Klick drauf, um es aus- oder wieder anzuschalten.'},
-    {icon: '💬', titel: 'Falls der Ton mal nicht geht', text: 'Direkt unter dem Raum kannst du mit allen an deinem Tisch schreiben — auch ohne Mikrofon bist du voll dabei.'},
-    {icon: '🪑', titel: 'Tischwechsel', text: 'Klick auf einen freien Stuhl, um rüberzugehen. An deinem Tisch hörst du alles klar, die anderen Tische werden zu leisem Gemurmel.'}
+    {icon: '💬', titel: 'Falls der Ton mal nicht geht', text: 'Direkt unter dem Raum kannst du im Tischgespräch mit allen schreiben — auch ohne Mikrofon bist du voll dabei.'},
+    {icon: '🪑', titel: 'Platz wechseln', text: 'Klick auf einen freien Stuhl, um dich umzusetzen, oder an die Kuchentheke, um kurz abseits zu stehen. Dein Getränk suchst du dir unten aus.'}
   ];
 
   let schritt = 0;
@@ -797,7 +827,7 @@ function zeigeTourFallsNeu(){
 
   function schliessen(){
     tour.hidden = true;
-    try{ localStorage.setItem('stammtisch-tour-v1', '1'); }catch(e){}
+    try{ localStorage.setItem('stammtisch-tour-v2', '1'); }catch(e){}
   }
 
   $('tour-weiter').onclick = () => {

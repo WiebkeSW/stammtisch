@@ -1,5 +1,15 @@
 # Stammtisch — Behelfslösung
 
+> **Stand 2026-10-25 — Umbau:** Es gibt jetzt **einen großen ovalen Stammtisch für
+> 8** (Stühle in `runden.js`, beliebig erweiterbar) im Stil „Omas Wohnzimmer"
+> (Vorbild Vollpension Generationencafé Wien), dazu die **Kuchentheke** als
+> Stehplatz. Man setzt sich beim Reinkommen auf einen zufälligen freien Stuhl.
+> Getränke nach Gruppen (Bier, Wein und Sekt, Warm, Ohne Alkohol, Eierlikör)
+> frei wählbar; die Speisekarte (Wiener Schnitzel, Kuchen) ist nur zum Ansehen.
+> „Bierdeckel" heißt jetzt **Tischgespräch**, „Mantel holen" heißt **Gehen**.
+> Wo unten noch von Tischen (rot/blau/grün), Tresen oder Bierdeckel die Rede
+> ist, beschreibt der Text die frühere Fassung. Kartentisch: Wunschliste.
+
 Ein digitaler Gastraum für bis zu 15 Leute: Tische statt Kachelwand, Ton pro
 Tisch, Bierdeckel als Gesprächsgedächtnis. Läuft **ohne eigenen Server**.
 
