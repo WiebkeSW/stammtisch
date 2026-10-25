@@ -15,7 +15,7 @@ export const STANDARD_RUNDE = 'wbg';
 export const RUNDEN = {
 
   wbg: {
-    titel: 'Stammtisch der Weiterbildungsgruppe',
+    titel: 'Stammtisch Kohorte 4',
     /* Der Raumschlüssel steht bewusst NICHT hier, sondern im geteilten Link:
          index.html?raum=<euer-schluessel>
        Dieser Code liegt öffentlich — ein Schlüssel in der Datei wäre keiner.
